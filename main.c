@@ -3,13 +3,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "conf.h"
 #include "log.h"
 #include "serialtty.h"
+#include "dfu.h"
 
 struct config conf;
-static int ser_fd;
+int ser_fd;
 
 static struct option options[] = {
 	{ "help",	no_argument,		NULL, 'h' },
@@ -50,10 +52,21 @@ static void main_options(int argc, char* argv[])
 
 int main(int argc, char *argv[])
 {
+	bool ret;
 	main_options(argc, argv);
 
 	LOG_INF("Port %s", conf.serport);
 	ser_fd = serial_init(conf.serport);
+
+	do {
+		ret = dfu_ping();
+		if (!ret)
+			sleep(1);
+	} while (!ret);
+
+	dfu_set_packet_receive_notification(0);
+	dfu_get_serial_mtu();
+	dfu_read_object(1);
 
 	serial_fini(ser_fd);
 }
