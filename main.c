@@ -67,6 +67,6 @@ int main(int argc, char *argv[])
 	dfu_set_packet_receive_notification(0);
 	dfu_get_serial_mtu();
 	dfu_read_object(1);
-
+	dfu_create_object(1, 141);
 	serial_fini(ser_fd);
 }

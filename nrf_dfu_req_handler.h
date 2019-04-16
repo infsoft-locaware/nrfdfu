@@ -240,9 +240,9 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t object_type;  //!< Object type. See @ref nrf_dfu_obj_type_t.
+    uint8_t object_type;  //!< Object type. See @ref nrf_dfu_obj_type_t.
     uint32_t object_size;  //!< Object size in bytes.
-} nrf_dfu_request_create_t;
+} __attribute__ ((packed)) nrf_dfu_request_create_t;
 
 /**
  * @brief @ref NRF_DFU_OP_OBJECT_WRITE request details.

@@ -22,6 +22,14 @@ static void encode_write(nrf_dfu_request_t* req, size_t len)
 	ret = write(ser_fd, slip_buf, slip_len);
 	if (ret < slip_len)
 		LOG_ERR("write error");
+#if 1
+	printf("[TX: ");
+	for (int i=0; i < len; i++) {
+		printf("0x%02x ", *(((uint8_t*)req)+i));
+	}
+	printf("]\n");
+#endif
+
 }
 
 static nrf_dfu_response_t* read_decode(void)
@@ -49,10 +57,11 @@ static nrf_dfu_response_t* read_decode(void)
 	}
 
 #if 1
+	printf("[RX: ");
 	for (int i=0; i < slip.current_index; i++) {
 		printf("0x%02x ", slip.p_buffer[i]);
 	}
-	printf("\n");
+	printf("]\n");
 #endif
 
 	if (slip.p_buffer[0] != NRF_DFU_OP_RESPONSE) {
@@ -143,5 +152,31 @@ bool dfu_read_object(uint32_t type)
 		LOG_INF("read obj offset: %d max_size: %d crc: %d",
 			resp->select.offset, resp->select.max_size,
 			resp->select.crc);
+	}
+}
+
+bool dfu_create_object(uint32_t type, uint32_t size)
+{
+	LOG_INF("Create object %x (%d)", type, size);
+	nrf_dfu_request_t req = {
+		.request = NRF_DFU_OP_OBJECT_CREATE,
+		.create.object_type = type,
+		.create.object_size = size,
+	};
+	LOG_INF("sixz %zd", sizeof(req.create));
+	encode_write(&req, 1 + sizeof(req.create));
+	nrf_dfu_response_t* resp = read_decode();
+
+	if (!resp) {
+		LOG_ERR("No response");
+		return false;
+	}
+
+	if (resp->request == NRF_DFU_OP_OBJECT_CREATE
+	    && resp->result == NRF_DFU_RES_CODE_SUCCESS) {
+		LOG_INF("create obj");
+		//TODO: Definition in nrf_dfu_req_handler.h is wrong!
+		//LOG_INF("create obj offset: %d crc: %d",
+		//	resp->create.offset, resp->create.crc);
 	}
 }
