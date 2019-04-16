@@ -54,12 +54,12 @@ static nrf_dfu_response_t* read_decode(void)
 	}
 	printf("\n");
 #endif
-	
+
 	if (slip.p_buffer[0] != NRF_DFU_OP_RESPONSE) {
 		LOG_ERR("no response");
 		return NULL;
 	}
-		
+
 	return (nrf_dfu_response_t*)(slip.p_buffer + 1);
 }
 
