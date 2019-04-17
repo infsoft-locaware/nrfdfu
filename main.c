@@ -134,7 +134,8 @@ int main(int argc, char *argv[])
 
 	main_options(argc, argv);
 
-	LOG_INF("Port %s", conf.serport);
+	LOG_DBGL(1, "Port: %s", conf.serport);
+	LOG_DBGL(1, "ZIP: %s", conf.zipfile);
 
 	zip_t* zip = zip_open(conf.zipfile, ZIP_RDONLY, NULL);
 	if (zip == NULL) {

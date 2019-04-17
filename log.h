@@ -8,7 +8,7 @@ void __attribute__ ((format (printf, 2, 3)))
 log_out(enum loglevel ll, const char *fmt, ...);
 
 #ifndef DEBUG
-#define DEBUG 0
+#define DEBUG 1
 #endif
 
 #define LOG_CRIT(...) log_out(LL_CRIT, __VA_ARGS__)
