@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <zip.h>
+#include <json-c/json.h>
 
 #include "conf.h"
 #include "log.h"
@@ -55,11 +56,33 @@ static void main_options(int argc, char* argv[])
 	}
 }
 
+static zip_file_t* zip_file_open(zip_t* zip, const char* name, size_t* size)
+{
+	struct zip_stat stat;
+
+	zip_stat_init(&stat);
+	int ret = zip_stat(zip, name, 0, &stat);
+	if (ret < 0) {
+		LOG_ERR("Unexpected ZIP file contents");
+		return NULL;
+	}
+
+	*size = stat.size;
+	zip_file_t* zf = zip_fopen_index(zip, stat.index, 0);
+	if (zf == NULL) {
+		LOG_ERR("Error opening ZIP file");
+		return NULL;
+	}
+	return zf;
+}
+
 int main(int argc, char *argv[])
 {
 	int ret;
 	main_options(argc, argv);
 	char buf[200];
+	const char* dat = NULL;
+	const char* bin = NULL;
 
 	zip_t* zip = zip_open("/home/br1/ble-radar-0.0-35-gc6cff41-DFU.zip", ZIP_RDONLY, NULL);
 	if (zip == NULL) {
@@ -74,36 +97,50 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
-	LOG_INF("MANI %s", buf);
-	// TODO: read JSON
-
-	struct zip_stat stat;
-	zip_stat_init(&stat);
-	ret = zip_stat(zip, "ble-radar-0.0-35-gc6cff41.dat", 0, &stat);
-	if (ret < 0) {
-		LOG_ERR("Unexpected ZIP file contents1");
-		zip_close(zip);
-		return EXIT_FAILURE;
-	}
-	size_t zs1 = stat.size;
-	zip_file_t* zf1 = zip_fopen_index(zip, stat.index, 0);
-	if (zf1 == NULL) {
-		LOG_ERR("Error opening ZIP file");
+	if (len <= 0) {
+		LOG_ERR("Could not read Manifest");
 		zip_close(zip);
 		return EXIT_FAILURE;
 	}
 
-	zip_stat_init(&stat);
-	ret = zip_stat(zip, "ble-radar-0.0-35-gc6cff41.bin", 0, &stat);
-	if (ret < 0) {
-		LOG_ERR("Unexpected ZIP file contents2");
+	/* read JSON */
+	json_object* json;
+	json_object* jobj;
+	json_object* jobj2;
+	json = json_tokener_parse(buf);
+	if (json == NULL) {
+		LOG_ERR("Manifest not valid JSON");
 		zip_close(zip);
 		return EXIT_FAILURE;
 	}
-	size_t zs2 = stat.size;
-	zip_file_t* zf2 = zip_fopen_index(zip, stat.index, 0);
-	if (zf2 == NULL) {
-		LOG_ERR("Error opening file");
+
+	if (json_object_object_get_ex(json, "manifest", &jobj) &&
+	    json_object_object_get_ex(jobj, "application", &jobj2)) {
+		if (json_object_object_get_ex(jobj2, "dat_file", &jobj)) {
+			dat = json_object_get_string(jobj);
+			LOG_INF("DAT %s", dat);
+		}
+		if (json_object_object_get_ex(jobj2, "bin_file", &jobj)) {
+			bin = json_object_get_string(jobj);
+			LOG_INF("BIN %s", bin);
+		}
+	}
+
+	if (!dat || !bin) {
+		LOG_ERR("Manifest format unknown");
+		json_object_put(json);
+		zip_close(zip);
+		return EXIT_FAILURE;
+	}
+
+	size_t zs1, zs2;
+	zip_file_t* zf1 = zip_file_open(zip, dat, &zs1);
+	zip_file_t* zf2 = zip_file_open(zip, bin, &zs2);
+
+	json_object_put(json);
+
+	if (zf1 == NULL || zf2 == NULL) {
+		zip_close(zip);
 		return EXIT_FAILURE;
 	}
 
