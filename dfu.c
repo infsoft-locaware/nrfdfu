@@ -6,11 +6,10 @@
 #include "log.h"
 #include "slip.h"
 #include "conf.h"
+#include "util.h"
 
-
-/* nrf_dfu_response_t is bigger than nrf_dfu_request_t and the maximum we
- * will ever receive */
-#define BUF_SIZE	sizeof(nrf_dfu_response_t)
+/* SLIP buffer size should be bigger than MTU */
+#define BUF_SIZE	100
 #define SLIP_BUF_SIZE	(BUF_SIZE * 2 + 1)
 #define MAX_READ_TRIES	10000
 
@@ -236,8 +235,12 @@ bool dfu_get_serial_mtu(void)
 		return false;
 	}
 
-	LOG_INF("Serial MTU %d", resp->mtu.size);
 	mtu = resp->mtu.size;
+	if (mtu > SLIP_BUF_SIZE) {
+		LOG_WARN("MTU of %d limited to buffer size %d", mtu, SLIP_BUF_SIZE);
+		mtu = SLIP_BUF_SIZE;
+	}
+	LOG_INF("Serial MTU %d", mtu);
 	return true;
 }
 
@@ -294,9 +297,10 @@ bool dfu_create_object(uint8_t type, uint32_t size)
 
 bool dfu_object_write(FILE* fp)
 {
-	LOG_INF("Write data");
 	uint8_t fbuf[(mtu-1)/2];
 	size_t written = 0;
+
+	LOG_INF("Write data (MTU %d buf %zd)", mtu, sizeof(fbuf));
 
 	do {
 		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
@@ -307,10 +311,12 @@ bool dfu_object_write(FILE* fp)
 		}
 		bool b = encode_write(fbuf, len + 1);
 		if (!b) {
+			LOG_ERR("enc failed");
 			return false;
 		}
 		written += len;
-	} while (!feof(fp));
+		LOG_INF("wrote %zd", len);
+	} while (!feof(fp) && written < max_size);
 
 	// No response expected
 	LOG_INF("Wrote %zd bytes", written);
@@ -377,8 +383,12 @@ bool dfu_object_write_procedure(uint8_t type, FILE* fp)
 	size_t sz = get_file_size(fp);
 
 	dfu_select_object(type);
-	dfu_create_object(type, sz);
-	dfu_object_write(fp);
-	dfu_get_crc();
-	dfu_object_execute();
+
+	/* create and write objects of max_size */
+	for (int i=0; i < sz; i += max_size) {
+		dfu_create_object(type, MIN(sz-i, max_size));
+		dfu_object_write(fp);
+		dfu_get_crc();
+		dfu_object_execute();
+	}
 }

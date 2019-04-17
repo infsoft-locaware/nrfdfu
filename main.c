@@ -83,7 +83,7 @@ int main(int argc, char *argv[])
 	dfu_get_serial_mtu();
 	dfu_object_write_procedure(1, fp1);
 
-	//dfu_object_write_procedure(2, fp2);
+	dfu_object_write_procedure(2, fp2);
 
 	serial_fini(ser_fd);
 }
