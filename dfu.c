@@ -32,7 +32,7 @@ static void encode_write(nrf_dfu_request_t* req, size_t len)
 
 }
 
-static nrf_dfu_response_t* read_decode(void)
+static bool read_decode(void)
 {
 	ssize_t ret;
 	slip_t slip;
@@ -52,10 +52,6 @@ static nrf_dfu_response_t* read_decode(void)
 		}
 	} while (end != 1 && read_failed < MAX_READ_TRIES);
 
-	if (end != 1) {
-		return NULL;
-	}
-
 #if 1
 	printf("[RX: ");
 	for (int i=0; i < slip.current_index; i++) {
@@ -64,12 +60,34 @@ static nrf_dfu_response_t* read_decode(void)
 	printf("]\n");
 #endif
 
-	if (slip.p_buffer[0] != NRF_DFU_OP_RESPONSE) {
+	return (end == 1);
+}
+
+static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
+{
+	bool succ = read_decode();
+
+	if (!succ) {
+		return NULL;
+	}
+
+	if (write_buf[0] != NRF_DFU_OP_RESPONSE) {
 		LOG_ERR("no response");
 		return NULL;
 	}
 
-	return (nrf_dfu_response_t*)(slip.p_buffer + 1);
+	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(write_buf + 1);
+
+	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
+		return NULL;
+	}
+
+	if (resp->request != request) {
+		LOG_ERR("Response does not match request");
+		return NULL;
+	}
+
+	return resp;
 }
 
 bool dfu_ping(void)
@@ -81,16 +99,14 @@ bool dfu_ping(void)
 		.ping.id = ping_id++,
 	};
 	encode_write(&req, 2);
-	nrf_dfu_response_t* resp = read_decode();
+	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
 		LOG_ERR("No ping response");
 		return false;
 	}
 
-	return (resp->request == NRF_DFU_OP_PING
-		&& resp->result == NRF_DFU_RES_CODE_SUCCESS
-		&& resp->ping.id == ping_id-1);
+	return (resp->ping.id == ping_id-1);
 }
 
 bool dfu_set_packet_receive_notification(uint32_t prn)
@@ -101,15 +117,14 @@ bool dfu_set_packet_receive_notification(uint32_t prn)
 		.prn.target = prn,
 	};
 	encode_write(&req, 3);
-	nrf_dfu_response_t* resp = read_decode();
+	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
 		LOG_ERR("No response");
 		return false;
 	}
 
-	return (resp->request == NRF_DFU_OP_RECEIPT_NOTIF_SET
-		&& resp->result == NRF_DFU_RES_CODE_SUCCESS);
+	return true;
 }
 
 bool dfu_get_serial_mtu(void)
@@ -119,17 +134,14 @@ bool dfu_get_serial_mtu(void)
 		.request = NRF_DFU_OP_MTU_GET,
 	};
 	encode_write(&req, 1);
-	nrf_dfu_response_t* resp = read_decode();
+	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
 		LOG_ERR("No response");
 		return false;
 	}
 
-	if (resp->request == NRF_DFU_OP_MTU_GET
-		&& resp->result == NRF_DFU_RES_CODE_SUCCESS) {
-		LOG_INF("Serial MTU %d", resp->mtu.size);
-	}
+	LOG_INF("Serial MTU %d", resp->mtu.size);
 }
 
 bool dfu_read_object(uint32_t type)
@@ -140,19 +152,15 @@ bool dfu_read_object(uint32_t type)
 		.select.object_type = type,
 	};
 	encode_write(&req, 2);
-	nrf_dfu_response_t* resp = read_decode();
+	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
 		LOG_ERR("No response");
 		return false;
 	}
 
-	if (resp->request == NRF_DFU_OP_OBJECT_SELECT
-	    && resp->result == NRF_DFU_RES_CODE_SUCCESS) {
-		LOG_INF("read obj offset: %d max_size: %d crc: %d",
-			resp->select.offset, resp->select.max_size,
-			resp->select.crc);
-	}
+	LOG_INF("read obj offset: %d max_size: %d crc: %d",
+		resp->select.offset, resp->select.max_size, resp->select.crc);
 }
 
 bool dfu_create_object(uint32_t type, uint32_t size)
@@ -165,18 +173,15 @@ bool dfu_create_object(uint32_t type, uint32_t size)
 	};
 	LOG_INF("sixz %zd", sizeof(req.create));
 	encode_write(&req, 1 + sizeof(req.create));
-	nrf_dfu_response_t* resp = read_decode();
+	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
 		LOG_ERR("No response");
 		return false;
 	}
 
-	if (resp->request == NRF_DFU_OP_OBJECT_CREATE
-	    && resp->result == NRF_DFU_RES_CODE_SUCCESS) {
-		LOG_INF("create obj");
-		//TODO: Definition in nrf_dfu_req_handler.h is wrong!
-		//LOG_INF("create obj offset: %d crc: %d",
-		//	resp->create.offset, resp->create.crc);
-	}
+	LOG_INF("create obj");
+	//TODO: Definition in nrf_dfu_req_handler.h is wrong!
+	//LOG_INF("create obj offset: %d crc: %d",
+	//	resp->create.offset, resp->create.crc);
 }
