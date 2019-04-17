@@ -262,7 +262,7 @@ bool dfu_select_object(uint8_t type)
 		return false;
 	}
 
-	LOG_INF("Select object offset: %u max_size: %u crc: %u",
+	LOG_INF("Selected object offset: %u max_size: %u crc: %u",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
 	max_size = resp->select.max_size;
 	return true;
@@ -287,10 +287,7 @@ bool dfu_create_object(uint8_t type, uint32_t size)
 		return false;
 	}
 
-	LOG_INF("create obj");
-	//TODO: Definition in nrf_dfu_req_handler.h is wrong!
-	//LOG_INF("create obj offset: %d crc: %d",
-	//	resp->create.offset, resp->create.crc);
+	LOG_INF("Created object");
 	return true;
 }
 
@@ -315,7 +312,6 @@ bool dfu_object_write(FILE* fp)
 			return false;
 		}
 		written += len;
-		LOG_INF("wrote %zd", len);
 	} while (!feof(fp) && written < max_size);
 
 	// No response expected
