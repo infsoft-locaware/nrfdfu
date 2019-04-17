@@ -335,3 +335,26 @@ bool dfu_get_crc(void)
 	LOG_INF("Got CRC %d offset %d", resp->crc.crc, resp->crc.offset);
 	return true;
 }
+
+/** this writes the object to flash */
+bool dfu_object_execute(void)
+{
+	LOG_INF("Object Execute");
+	nrf_dfu_request_t req = {
+		.request = NRF_DFU_OP_OBJECT_EXECUTE,
+	};
+
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	sleep(1); // TODO
+
+	nrf_dfu_response_t* resp = get_response(req.request);
+	if (!resp) {
+		return false;
+	}
+
+	return true;
+}
