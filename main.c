@@ -58,6 +58,12 @@ int main(int argc, char *argv[])
 	bool ret;
 	main_options(argc, argv);
 
+	FILE* fp1 = fopen("/home/br1/ble-radar-0.0-35-gc6cff41-DFU/ble-radar-0.0-35-gc6cff41.dat", "r");
+	if (fp1 == NULL) {
+		LOG_ERR("Error opening file");
+		return EXIT_FAILURE;
+	}
+
 	LOG_INF("Port %s", conf.serport);
 	ser_fd = serial_init(conf.serport);
 
@@ -71,5 +77,7 @@ int main(int argc, char *argv[])
 	dfu_get_serial_mtu();
 	dfu_select_object(1);
 	dfu_create_object(1, 141);
+	dfu_object_write(fp1);
+
 	serial_fini(ser_fd);
 }

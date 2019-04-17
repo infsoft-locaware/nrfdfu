@@ -17,7 +17,7 @@
 static uint8_t buf[SLIP_BUF_SIZE];
 extern int ser_fd;
 
-static bool encode_write(nrf_dfu_request_t* req, size_t len)
+static bool encode_write(uint8_t* req, size_t len)
 {
 	uint32_t slip_len;
 	ssize_t ret;
@@ -31,7 +31,7 @@ static bool encode_write(nrf_dfu_request_t* req, size_t len)
 	if (conf.debug > 2) {
 		printf("[ TX: ");
 		for (int i=0; i < len; i++) {
-			printf("0x%02x ", *(((uint8_t*)req)+i));
+			printf("0x%02x ", *(req+i));
 		}
 		printf("]\n");
 	}
@@ -76,7 +76,7 @@ static bool send_request(nrf_dfu_request_t* req)
 		return false;
 	}
 
-	return encode_write(req, size);
+	return encode_write((uint8_t*)req, size);
 }
 
 static bool read_decode(void)
@@ -235,6 +235,7 @@ bool dfu_get_serial_mtu(void)
 	}
 
 	LOG_INF("Serial MTU %d", resp->mtu.size);
+	return true;
 }
 
 bool dfu_select_object(uint32_t type)
@@ -257,6 +258,7 @@ bool dfu_select_object(uint32_t type)
 
 	LOG_INF("Select object offset: %d max_size: %d crc: %d",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
+	return true;
 }
 
 bool dfu_create_object(uint32_t type, uint32_t size)
@@ -282,4 +284,31 @@ bool dfu_create_object(uint32_t type, uint32_t size)
 	//TODO: Definition in nrf_dfu_req_handler.h is wrong!
 	//LOG_INF("create obj offset: %d crc: %d",
 	//	resp->create.offset, resp->create.crc);
+	return true;
+}
+
+
+bool dfu_object_write(FILE* fp)
+{
+	LOG_INF("Write data");
+	uint8_t fbuf[(131-1)/2-1]; // TODO MTU
+	size_t written = 0;
+
+	do {
+		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
+		size_t len = fread(fbuf + 1, 1, sizeof(fbuf), fp);
+		if (len == 0) {
+			LOG_ERR("fread error");
+			break;
+		}
+		bool b = encode_write(fbuf, len + 1);
+		if (!b) {
+			return false;
+		}
+		written += len;
+	} while (!feof(fp));
+
+	// No response expected
+	LOG_INF("Wrote %zd bytes", written);
+	return true;
 }
