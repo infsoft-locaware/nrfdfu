@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 	dfu_select_object(1);
 	dfu_create_object(1, 141);
 	dfu_object_write(fp1);
+	dfu_get_crc();
 
 	serial_fini(ser_fd);
 }

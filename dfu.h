@@ -10,5 +10,6 @@ bool dfu_get_serial_mtu(void);
 bool dfu_select_object(uint32_t type);
 bool dfu_create_object(uint32_t type, uint32_t size);
 bool dfu_object_write(FILE* fp);
+bool dfu_get_crc(void);
 
 #endif

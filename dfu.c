@@ -312,3 +312,26 @@ bool dfu_object_write(FILE* fp)
 	LOG_INF("Wrote %zd bytes", written);
 	return true;
 }
+
+bool dfu_get_crc(void)
+{
+	LOG_INF("Get CRC");
+	nrf_dfu_request_t req = {
+		.request = NRF_DFU_OP_CRC_GET,
+	};
+
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	sleep(1); // TODO
+
+	nrf_dfu_response_t* resp = get_response(req.request);
+	if (!resp) {
+		return false;
+	}
+
+	LOG_INF("Got CRC %d offset %d", resp->crc.crc, resp->crc.offset);
+	return true;
+}
