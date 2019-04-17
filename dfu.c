@@ -5,6 +5,8 @@
 #include "nrf_dfu_req_handler.h"
 #include "log.h"
 #include "slip.h"
+#include "conf.h"
+
 
 /* nrf_dfu_response_t is bigger than nrf_dfu_request_t and the maximum we
  * will ever receive */
@@ -25,13 +27,15 @@ static bool encode_write(nrf_dfu_request_t* req, size_t len)
 		LOG_ERR("write error");
 		return false;
 	}
-#if 1
-	printf("[ TX: ");
-	for (int i=0; i < len; i++) {
-		printf("0x%02x ", *(((uint8_t*)req)+i));
+
+	if (conf.debug > 2) {
+		printf("[ TX: ");
+		for (int i=0; i < len; i++) {
+			printf("0x%02x ", *(((uint8_t*)req)+i));
+		}
+		printf("]\n");
 	}
-	printf("]\n");
-#endif
+
 	return true;
 }
 
@@ -99,13 +103,13 @@ static bool read_decode(void)
 		}
 	} while (end != 1 && read_failed < MAX_READ_TRIES);
 
-#if 1
-	printf("[ RX: ");
-	for (int i=0; i < slip.current_index; i++) {
-		printf("0x%02x ", slip.p_buffer[i]);
+	if (conf.debug > 2) {
+		printf("[ RX: ");
+		for (int i=0; i < slip.current_index; i++) {
+			printf("0x%02x ", slip.p_buffer[i]);
+		}
+		printf("]\n");
 	}
-	printf("]\n");
-#endif
 
 	return (end == 1);
 }

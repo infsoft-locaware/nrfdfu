@@ -17,5 +17,6 @@ log_out(enum loglevel ll, const char *fmt, ...);
 #define LOG_NOTI(...) log_out(LL_NOTICE, __VA_ARGS__)
 #define LOG_INF(...) log_out(LL_INFO, __VA_ARGS__)
 #define LOG_DBG(...) do { if (DEBUG) log_out(LL_DEBUG, __VA_ARGS__); } while (0)
+#define LOG_DBGL(lvl, ...) do { if (DEBUG && conf.debug >= lvl) log_out(LL_DEBUG, __VA_ARGS__); } while (0)
 
 #endif
