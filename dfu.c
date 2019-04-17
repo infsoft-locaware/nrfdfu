@@ -110,6 +110,38 @@ static bool read_decode(void)
 	return (end == 1);
 }
 
+static const char* dfu_err_str(nrf_dfu_result_t res)
+{
+	switch (res) {
+		case NRF_DFU_RES_CODE_INVALID:
+			return "Invalid opcode";
+		case NRF_DFU_RES_CODE_SUCCESS:
+			return "Operation successful";
+		case NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED:
+			return "Opcode not supported";
+		case NRF_DFU_RES_CODE_INVALID_PARAMETER:
+			return "Missing or invalid parameter value";
+		case NRF_DFU_RES_CODE_INSUFFICIENT_RESOURCES:
+			return "Not enough memory for the data object";
+		case NRF_DFU_RES_CODE_INVALID_OBJECT:
+			return "Data object does not match the firmware and "
+				"hardware requirements, the signature is wrong, "
+				"or parsing the command failed";
+		case NRF_DFU_RES_CODE_UNSUPPORTED_TYPE:
+			return "Not a valid object type for a Create request";
+		case NRF_DFU_RES_CODE_OPERATION_NOT_PERMITTED:
+			return "The state of the DFU process does not allow this "
+				"operation";
+		case NRF_DFU_RES_CODE_OPERATION_FAILED:
+			return "Operation failed";
+		case NRF_DFU_RES_CODE_EXT_ERROR:
+			return "Extended error";
+			/* The next byte of the response contains the error code
+			 * of the extended error (see @ref nrf_dfu_ext_error_code_t. */
+	}
+	return "Unknown error";
+}
+
 static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
 	bool succ = read_decode();
@@ -126,6 +158,7 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(buf + 1);
 
 	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
+		LOG_ERR("Error %s", dfu_err_str(resp->result));
 		return NULL;
 	}
 
