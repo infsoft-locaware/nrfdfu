@@ -191,9 +191,9 @@ bool dfu_get_serial_mtu(void)
 	LOG_INF("Serial MTU %d", resp->mtu.size);
 }
 
-bool dfu_read_object(uint32_t type)
+bool dfu_select_object(uint32_t type)
 {
-	LOG_INF("Read object %x", type);
+	LOG_INF("Select object %x", type);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_OBJECT_SELECT,
 		.select.object_type = type,
@@ -206,7 +206,7 @@ bool dfu_read_object(uint32_t type)
 		return false;
 	}
 
-	LOG_INF("read obj offset: %d max_size: %d crc: %d",
+	LOG_INF("Select object offset: %d max_size: %d crc: %d",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
 }
 
