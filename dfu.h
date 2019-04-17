@@ -10,7 +10,7 @@ bool dfu_get_serial_mtu(void);
 bool dfu_select_object(uint8_t type);
 bool dfu_create_object(uint8_t type, uint32_t size);
 bool dfu_object_write(FILE* fp);
-bool dfu_get_crc(void);
+uint32_t dfu_get_crc(void);
 bool dfu_object_execute(void);
 bool dfu_object_write_procedure(uint8_t type, FILE* fp);
 

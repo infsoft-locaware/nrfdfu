@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include <sys/select.h>
 
+#include <zlib.h>
+
 #include "dfu.h"
 #include "nrf_dfu_req_handler.h"
 #include "log.h"
@@ -17,6 +19,7 @@ static uint8_t buf[SLIP_BUF_SIZE];
 static uint16_t mtu;
 static uint32_t max_size;
 extern int ser_fd;
+static uLong crc;
 
 static bool encode_write(uint8_t* req, size_t len)
 {
@@ -327,14 +330,15 @@ bool dfu_object_write(FILE* fp)
 			return false;
 		}
 		written += len;
+		crc = crc32(crc, fbuf+1, len);
 	} while (!feof(fp) && written < max_size);
 
 	// No response expected
-	LOG_INF("Wrote %zd bytes", written);
+	LOG_INF("Wrote %zd bytes CRC %lu", written, crc);
 	return true;
 }
 
-bool dfu_get_crc(void)
+uint32_t dfu_get_crc(void)
 {
 	LOG_INF("Get CRC");
 	nrf_dfu_request_t req = {
@@ -343,16 +347,16 @@ bool dfu_get_crc(void)
 
 	bool b = send_request(&req);
 	if (!b) {
-		return false;
+		return 0;
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
-		return false;
+		return 0;
 	}
 
 	LOG_INF("Got CRC %u offset %u", resp->crc.crc, resp->crc.offset);
-	return true;
+	return resp->crc.crc;
 }
 
 /** this writes the object to flash */
@@ -390,12 +394,17 @@ bool dfu_object_write_procedure(uint8_t type, FILE* fp)
 	size_t sz = get_file_size(fp);
 
 	dfu_select_object(type);
+	crc = crc32(0L, Z_NULL, 0);
 
 	/* create and write objects of max_size */
 	for (int i=0; i < sz; i += max_size) {
 		dfu_create_object(type, MIN(sz-i, max_size));
 		dfu_object_write(fp);
-		dfu_get_crc();
+		uint32_t rcrc = dfu_get_crc();
+		if (rcrc != crc) {
+			LOG_ERR("CRC failed %u %lu", rcrc, crc);
+			return false;
+		}
 		dfu_object_execute();
 	}
 }
