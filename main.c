@@ -81,13 +81,9 @@ int main(int argc, char *argv[])
 
 	dfu_set_packet_receive_notification(0);
 	dfu_get_serial_mtu();
-	dfu_select_object(1);
-	dfu_create_object(1, 141);
-	dfu_object_write(fp1);
-	dfu_get_crc();
-	dfu_object_execute();
+	dfu_object_write_procedure(1, fp1);
 
-	dfu_object_write_procedure(1, fp2);
+	//dfu_object_write_procedure(2, fp2);
 
 	serial_fini(ser_fd);
 }

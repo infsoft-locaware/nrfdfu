@@ -15,6 +15,8 @@
 #define MAX_READ_TRIES	10000
 
 static uint8_t buf[SLIP_BUF_SIZE];
+static uint16_t mtu;
+static uint32_t max_size;
 extern int ser_fd;
 
 static bool encode_write(uint8_t* req, size_t len)
@@ -31,7 +33,7 @@ static bool encode_write(uint8_t* req, size_t len)
 	if (conf.debug > 2) {
 		printf("[ TX: ");
 		for (int i=0; i < len; i++) {
-			printf("0x%02x ", *(req+i));
+			printf("%d ", *(req+i));
 		}
 		printf("]\n");
 	}
@@ -106,7 +108,7 @@ static bool read_decode(void)
 	if (conf.debug > 2) {
 		printf("[ RX: ");
 		for (int i=0; i < slip.current_index; i++) {
-			printf("0x%02x ", slip.p_buffer[i]);
+			printf("%d ", slip.p_buffer[i]);
 		}
 		printf("]\n");
 	}
@@ -235,6 +237,7 @@ bool dfu_get_serial_mtu(void)
 	}
 
 	LOG_INF("Serial MTU %d", resp->mtu.size);
+	mtu = resp->mtu.size;
 	return true;
 }
 
@@ -258,6 +261,7 @@ bool dfu_select_object(uint8_t type)
 
 	LOG_INF("Select object offset: %d max_size: %d crc: %d",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
+	max_size = resp->select.max_size;
 	return true;
 }
 
@@ -291,12 +295,12 @@ bool dfu_create_object(uint8_t type, uint32_t size)
 bool dfu_object_write(FILE* fp)
 {
 	LOG_INF("Write data");
-	uint8_t fbuf[(131-1)/2-1]; // TODO MTU
+	uint8_t fbuf[(mtu-1)/2];
 	size_t written = 0;
 
 	do {
 		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
-		size_t len = fread(fbuf + 1, 1, sizeof(fbuf), fp);
+		size_t len = fread(fbuf + 1, 1, sizeof(fbuf) - 1, fp);
 		if (len == 0) {
 			LOG_ERR("fread error");
 			break;
@@ -359,7 +363,22 @@ bool dfu_object_execute(void)
 	return true;
 }
 
-bool dfu_object_write_procedure(uint32_t type, FILE* fp)
+static size_t get_file_size(FILE* fp)
 {
-	
+	fseek(fp, 0L, SEEK_END);
+	size_t sz = ftell(fp);
+	fseek(fp, 0L, SEEK_SET);
+	LOG_INF("Size %zd", sz);
+	return sz;
+}
+
+bool dfu_object_write_procedure(uint8_t type, FILE* fp)
+{
+	size_t sz = get_file_size(fp);
+
+	dfu_select_object(type);
+	dfu_create_object(type, sz);
+	dfu_object_write(fp);
+	dfu_get_crc();
+	dfu_object_execute();
 }
