@@ -54,6 +54,15 @@ static void main_options(int argc, char* argv[])
 			break;
 		}
 	}
+
+	/* first non-option argument is ZIP file */
+	if (optind < argc) {
+		conf.zipfile = argv[optind++];
+	}
+
+	if (optind < argc) {
+		LOG_ERR("Garbage arguments from %s",argv[optind]);
+	}
 }
 
 static zip_file_t* zip_file_open(zip_t* zip, const char* name, size_t* size)
@@ -127,7 +136,7 @@ int main(int argc, char *argv[])
 
 	LOG_INF("Port %s", conf.serport);
 
-	zip_t* zip = zip_open("/home/br1/ble-radar-0.0-35-gc6cff41-DFU.zip", ZIP_RDONLY, NULL);
+	zip_t* zip = zip_open(conf.zipfile, ZIP_RDONLY, NULL);
 	if (zip == NULL) {
 		LOG_ERR("Could not open ZIP file");
 		return EXIT_FAILURE;

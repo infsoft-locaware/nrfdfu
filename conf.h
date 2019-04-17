@@ -9,6 +9,7 @@
 struct config {
 	int		debug;
 	char		serport[CONF_MAX_LEN];
+	char*		zipfile;
 };
 
 extern struct config conf;
