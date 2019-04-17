@@ -14,7 +14,7 @@
 #include "dfu.h"
 
 struct config conf;
-int ser_fd;
+int ser_fd = -1;
 
 static struct option options[] = {
 	{ "help",	no_argument,		NULL, 'h' },
@@ -34,6 +34,9 @@ static void usage(void)
 
 static void main_options(int argc, char* argv[])
 {
+	/* defaults */
+	conf.serport = "/dev/ttyUSB0";
+
 	int n = 0;
 	while (n >= 0) {
 		n = getopt_long(argc, argv, "hd::p:", options, NULL);
@@ -86,20 +89,20 @@ static zip_file_t* zip_file_open(zip_t* zip, const char* name, size_t* size)
 }
 
 /* dat and bin have to be freed by caller */
-void read_manifest(zip_t* zip, const char** dat, const char** bin)
+static int read_manifest(zip_t* zip, char** dat, char** bin)
 {
 	char buf[200];
 
 	zip_file_t* zf = zip_fopen(zip, "manifest.json", 0);
 	if (zf == NULL) {
 		LOG_ERR("ZIP file does not contain manifest");
-		return;
+		return -1;
 	}
 
 	zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
 	if (len <= 0) {
 		LOG_ERR("Could not read Manifest");
-		return;
+		return -1;
 	}
 
 	/* read JSON */
@@ -110,7 +113,7 @@ void read_manifest(zip_t* zip, const char** dat, const char** bin)
 	if (json == NULL) {
 		LOG_ERR("Manifest not valid JSON");
 		zip_fclose(zf);
-		return;
+		return -1;
 	}
 
 	if (json_object_object_get_ex(json, "manifest", &jobj) &&
@@ -124,13 +127,23 @@ void read_manifest(zip_t* zip, const char** dat, const char** bin)
 	}
 	json_object_put(json);
 	zip_fclose(zf);
+
+	if (!*dat || !*bin) {
+		LOG_ERR("Manifest format unknown");
+		return -1;
+	}
+
+	return 0;
 }
 
 int main(int argc, char *argv[])
 {
-	int ret;
-	const char* dat = NULL;
-	const char* bin = NULL;
+	int ret = EXIT_FAILURE;
+	char* dat = NULL;
+	char* bin = NULL;
+	zip_file_t* zf1 = NULL;
+	zip_file_t* zf2 = NULL;
+	size_t zs1, zs2;
 
 	main_options(argc, argv);
 
@@ -139,44 +152,47 @@ int main(int argc, char *argv[])
 
 	zip_t* zip = zip_open(conf.zipfile, ZIP_RDONLY, NULL);
 	if (zip == NULL) {
-		LOG_ERR("Could not open ZIP file");
-		return EXIT_FAILURE;
+		LOG_ERR("Could not open ZIP file '%s'", conf.zipfile);
+		goto exit;
 	}
 
-	read_manifest(zip, &dat, &bin);
-	if (!dat || !bin) {
-		LOG_ERR("Manifest format unknown");
-		zip_close(zip);
-		return EXIT_FAILURE;
+	ret = read_manifest(zip, &dat, &bin);
+	if (ret < 0 || !dat || !bin) {
+		goto exit;
 	}
 
 	/* open data files in ZIP file */
-	size_t zs1, zs2;
-	zip_file_t* zf1 = zip_file_open(zip, dat, &zs1);
-	zip_file_t* zf2 = zip_file_open(zip, bin, &zs2);
+	zf1 = zip_file_open(zip, dat, &zs1);
+	zf2 = zip_file_open(zip, bin, &zs2);
 	if (zf1 == NULL || zf2 == NULL) {
-		zip_fclose(zf1);
-		zip_fclose(zf2);
-		zip_close(zip);
-		return EXIT_FAILURE;
+		goto exit;
 	}
 
 	ser_fd = serial_init(conf.serport);
+	if (ser_fd <= 0) {
+		goto exit;
+	}
 
+	/* first check if Bootloader responds to Ping */
 	do {
 		ret = dfu_ping();
 		if (!ret)
 			sleep(1);
 	} while (!ret);
 
+	/* Upgrade process */
 	dfu_set_packet_receive_notification(0);
 	dfu_get_serial_mtu();
-
 	dfu_object_write_procedure(1, zf1, zs1);
 	dfu_object_write_procedure(2, zf2, zs2);
+	ret = EXIT_SUCCESS;
 
-	zip_fclose(zf1);
-	zip_fclose(zf2);
-	zip_close(zip);
+exit:
+	free(bin);
+	free(dat);
+	if (zf1) zip_fclose(zf1);
+	if (zf2) zip_fclose(zf2);
+	if (zip) zip_close(zip);
 	serial_fini(ser_fd);
+	return ret;
 }
