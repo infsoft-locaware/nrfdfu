@@ -6,26 +6,27 @@
 #include "log.h"
 #include "slip.h"
 
-#define BUF_SIZE	200
+/* nrf_dfu_response_t is bigger than nrf_dfu_request_t and the maximum we
+ * will ever receive */
+#define BUF_SIZE	sizeof(nrf_dfu_response_t)
 #define SLIP_BUF_SIZE	(BUF_SIZE * 2 + 1)
 #define MAX_READ_TRIES	10000
 
-static uint8_t write_buf[BUF_SIZE];
-static uint8_t slip_buf[SLIP_BUF_SIZE];
+static uint8_t buf[SLIP_BUF_SIZE];
 extern int ser_fd;
 
 static bool encode_write(nrf_dfu_request_t* req, size_t len)
 {
 	uint32_t slip_len;
 	ssize_t ret;
-	slip_encode(slip_buf, (uint8_t*)req, len, &slip_len);
-	ret = write(ser_fd, slip_buf, slip_len);
+	slip_encode(buf, (uint8_t*)req, len, &slip_len);
+	ret = write(ser_fd, buf, slip_len);
 	if (ret < slip_len) {
 		LOG_ERR("write error");
 		return false;
 	}
 #if 1
-	printf("[TX: ");
+	printf("[ TX: ");
 	for (int i=0; i < len; i++) {
 		printf("0x%02x ", *(((uint8_t*)req)+i));
 	}
@@ -78,24 +79,28 @@ static bool read_decode(void)
 {
 	ssize_t ret;
 	slip_t slip;
-	slip.p_buffer = write_buf;
+	slip.p_buffer = buf;
 	slip.current_index = 0;
 	slip.buffer_len = BUF_SIZE;
 	slip.state = SLIP_STATE_DECODING;
 	int end = 0;
 	int read_failed = 0;
+	char read_buf;
 
 	do {
-		ret = read(ser_fd, slip_buf, 1);
+		ret = read(ser_fd, &read_buf, 1);
 		if (ret > 0) {
-			end = slip_decode_add_byte(&slip, slip_buf[0]);
+			end = slip_decode_add_byte(&slip, read_buf);
+			if (end != -3) { // if not "busy": error or finished
+				break;
+			}
 		} else {
 			read_failed++;
 		}
 	} while (end != 1 && read_failed < MAX_READ_TRIES);
 
 #if 1
-	printf("[RX: ");
+	printf("[ RX: ");
 	for (int i=0; i < slip.current_index; i++) {
 		printf("0x%02x ", slip.p_buffer[i]);
 	}
@@ -113,12 +118,12 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 		return NULL;
 	}
 
-	if (write_buf[0] != NRF_DFU_OP_RESPONSE) {
+	if (buf[0] != NRF_DFU_OP_RESPONSE) {
 		LOG_ERR("no response");
 		return NULL;
 	}
 
-	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(write_buf + 1);
+	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(buf + 1);
 
 	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
 		return NULL;
