@@ -262,7 +262,7 @@ bool dfu_select_object(uint8_t type)
 		return false;
 	}
 
-	LOG_INF("Select object offset: %d max_size: %d crc: %d",
+	LOG_INF("Select object offset: %u max_size: %u crc: %u",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
 	max_size = resp->select.max_size;
 	return true;
@@ -270,7 +270,7 @@ bool dfu_select_object(uint8_t type)
 
 bool dfu_create_object(uint8_t type, uint32_t size)
 {
-	LOG_INF("Create object %x (%d)", type, size);
+	LOG_INF("Create object %x (%u)", type, size);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_OBJECT_CREATE,
 		.create.object_type = type,
@@ -342,7 +342,7 @@ bool dfu_get_crc(void)
 		return false;
 	}
 
-	LOG_INF("Got CRC %d offset %d", resp->crc.crc, resp->crc.offset);
+	LOG_INF("Got CRC %u offset %u", resp->crc.crc, resp->crc.offset);
 	return true;
 }
 
