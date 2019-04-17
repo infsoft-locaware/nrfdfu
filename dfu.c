@@ -358,3 +358,8 @@ bool dfu_object_execute(void)
 
 	return true;
 }
+
+bool dfu_object_write_procedure(uint32_t type, FILE* fp)
+{
+	
+}

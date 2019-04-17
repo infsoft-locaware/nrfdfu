@@ -64,6 +64,12 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	FILE* fp2 = fopen("/home/br1/ble-radar-0.0-35-gc6cff41-DFU/ble-radar-0.0-35-gc6cff41.bin", "r");
+	if (fp2 == NULL) {
+		LOG_ERR("Error opening file");
+		return EXIT_FAILURE;
+	}
+
 	LOG_INF("Port %s", conf.serport);
 	ser_fd = serial_init(conf.serport);
 
@@ -79,6 +85,9 @@ int main(int argc, char *argv[])
 	dfu_create_object(1, 141);
 	dfu_object_write(fp1);
 	dfu_get_crc();
+	dfu_object_execute();
+
+	dfu_object_write_procedure(1, fp2);
 
 	serial_fini(ser_fd);
 }
