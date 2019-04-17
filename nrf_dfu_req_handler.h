@@ -150,9 +150,9 @@ typedef struct
  */
 typedef struct
 {
+    uint32_t max_size;                  //!< Maximum size of selected object.
     uint32_t offset;                    //!< Current offset.
     uint32_t crc;                       //!< Current CRC.
-    uint32_t max_size;                  //!< Maximum size of selected object.
 } nrf_dfu_response_select_t;
 
 /**
@@ -232,7 +232,7 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t object_type;  //!< Object type. See @ref nrf_dfu_obj_type_t.
+    uint8_t object_type;  //!< Object type. See @ref nrf_dfu_obj_type_t.
 } nrf_dfu_request_select_t;
 
 /**
