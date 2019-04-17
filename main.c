@@ -63,44 +63,34 @@ static zip_file_t* zip_file_open(zip_t* zip, const char* name, size_t* size)
 	zip_stat_init(&stat);
 	int ret = zip_stat(zip, name, 0, &stat);
 	if (ret < 0) {
-		LOG_ERR("Unexpected ZIP file contents");
+		LOG_ERR("ZIP file does not contain %s", name);
 		return NULL;
 	}
-
 	*size = stat.size;
+
 	zip_file_t* zf = zip_fopen_index(zip, stat.index, 0);
 	if (zf == NULL) {
-		LOG_ERR("Error opening ZIP file");
+		LOG_ERR("Error opening %s in ZIP file", name);
 		return NULL;
 	}
 	return zf;
 }
 
-int main(int argc, char *argv[])
+/* dat and bin have to be freed by caller */
+void read_manifest(zip_t* zip, const char** dat, const char** bin)
 {
-	int ret;
-	main_options(argc, argv);
 	char buf[200];
-	const char* dat = NULL;
-	const char* bin = NULL;
-
-	zip_t* zip = zip_open("/home/br1/ble-radar-0.0-35-gc6cff41-DFU.zip", ZIP_RDONLY, NULL);
-	if (zip == NULL) {
-		LOG_ERR("Could not open ZIP file");
-		return EXIT_FAILURE;
-	}
 
 	zip_file_t* zf = zip_fopen(zip, "manifest.json", 0);
 	if (zf == NULL) {
-		LOG_ERR("Unexpected ZIP file contents");
-		zip_close(zip);
-		return EXIT_FAILURE;
+		LOG_ERR("ZIP file does not contain manifest");
+		return;
 	}
+
 	zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
 	if (len <= 0) {
 		LOG_ERR("Could not read Manifest");
-		zip_close(zip);
-		return EXIT_FAILURE;
+		return;
 	}
 
 	/* read JSON */
@@ -110,41 +100,57 @@ int main(int argc, char *argv[])
 	json = json_tokener_parse(buf);
 	if (json == NULL) {
 		LOG_ERR("Manifest not valid JSON");
-		zip_close(zip);
-		return EXIT_FAILURE;
+		zip_fclose(zf);
+		return;
 	}
 
 	if (json_object_object_get_ex(json, "manifest", &jobj) &&
 	    json_object_object_get_ex(jobj, "application", &jobj2)) {
 		if (json_object_object_get_ex(jobj2, "dat_file", &jobj)) {
-			dat = json_object_get_string(jobj);
-			LOG_INF("DAT %s", dat);
+			*dat = strdup(json_object_get_string(jobj));
 		}
 		if (json_object_object_get_ex(jobj2, "bin_file", &jobj)) {
-			bin = json_object_get_string(jobj);
-			LOG_INF("BIN %s", bin);
+			*bin = strdup(json_object_get_string(jobj));
 		}
 	}
+	json_object_put(json);
+	zip_fclose(zf);
+}
 
+int main(int argc, char *argv[])
+{
+	int ret;
+	const char* dat = NULL;
+	const char* bin = NULL;
+
+	main_options(argc, argv);
+
+	LOG_INF("Port %s", conf.serport);
+
+	zip_t* zip = zip_open("/home/br1/ble-radar-0.0-35-gc6cff41-DFU.zip", ZIP_RDONLY, NULL);
+	if (zip == NULL) {
+		LOG_ERR("Could not open ZIP file");
+		return EXIT_FAILURE;
+	}
+
+	read_manifest(zip, &dat, &bin);
 	if (!dat || !bin) {
 		LOG_ERR("Manifest format unknown");
-		json_object_put(json);
 		zip_close(zip);
 		return EXIT_FAILURE;
 	}
 
+	/* open data files in ZIP file */
 	size_t zs1, zs2;
 	zip_file_t* zf1 = zip_file_open(zip, dat, &zs1);
 	zip_file_t* zf2 = zip_file_open(zip, bin, &zs2);
-
-	json_object_put(json);
-
 	if (zf1 == NULL || zf2 == NULL) {
+		zip_fclose(zf1);
+		zip_fclose(zf2);
 		zip_close(zip);
 		return EXIT_FAILURE;
 	}
 
-	LOG_INF("Port %s", conf.serport);
 	ser_fd = serial_init(conf.serport);
 
 	do {
@@ -159,6 +165,8 @@ int main(int argc, char *argv[])
 	dfu_object_write_procedure(1, zf1, zs1);
 	dfu_object_write_procedure(2, zf2, zs2);
 
+	zip_fclose(zf1);
+	zip_fclose(zf2);
 	zip_close(zip);
 	serial_fini(ser_fd);
 }
