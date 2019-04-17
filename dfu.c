@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <sys/select.h>
 
 #include "dfu.h"
 #include "nrf_dfu_req_handler.h"
@@ -11,7 +12,6 @@
 /* SLIP buffer size should be bigger than MTU */
 #define BUF_SIZE	100
 #define SLIP_BUF_SIZE	(BUF_SIZE * 2 + 1)
-#define MAX_READ_TRIES	10000
 
 static uint8_t buf[SLIP_BUF_SIZE];
 static uint16_t mtu;
@@ -80,6 +80,17 @@ static bool send_request(nrf_dfu_request_t* req)
 	return encode_write((uint8_t*)req, size);
 }
 
+static bool wait_serial_ready(int sec)
+{
+	struct timeval tv = {};
+	fd_set fds = {};
+	tv.tv_sec = sec;
+	FD_ZERO(&fds);
+	FD_SET(ser_fd, &fds);
+	int ret = select(ser_fd+1, &fds, NULL, NULL, &tv);
+	return ret <= 0; // error or timeout
+}
+
 static bool read_decode(void)
 {
 	ssize_t ret;
@@ -89,20 +100,24 @@ static bool read_decode(void)
 	slip.buffer_len = BUF_SIZE;
 	slip.state = SLIP_STATE_DECODING;
 	int end = 0;
-	int read_failed = 0;
 	char read_buf;
 
 	do {
+		bool timeout = wait_serial_ready(3);
+		if (timeout) {
+			LOG_INF("Timeout on Serial RX");
+			break;
+		}
 		ret = read(ser_fd, &read_buf, 1);
 		if (ret > 0) {
 			end = slip_decode_add_byte(&slip, read_buf);
 			if (end != -3) { // if not "busy": error or finished
+				if (end != 1)
+					LOG_ERR("Slip err %d", end);
 				break;
 			}
-		} else {
-			read_failed++;
 		}
-	} while (end != 1 && read_failed < MAX_READ_TRIES);
+	} while (end != 1);
 
 	if (conf.debug > 2) {
 		printf("[ RX: ");
@@ -331,8 +346,6 @@ bool dfu_get_crc(void)
 		return false;
 	}
 
-	sleep(1); // TODO
-
 	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
 		return false;
@@ -354,8 +367,6 @@ bool dfu_object_execute(void)
 	if (!b) {
 		return false;
 	}
-
-	sleep(1); // TODO
 
 	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
