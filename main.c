@@ -50,7 +50,7 @@ static void main_options(int argc, char* argv[])
 				conf.debug = atoi(optarg);
 			break;
 		case 'p':
-			strncpy(conf.serport, optarg, CONF_MAX_LEN);
+			conf.serport = optarg;
 			break;
 		}
 	}

@@ -8,7 +8,7 @@
 
 struct config {
 	int		debug;
-	char		serport[CONF_MAX_LEN];
+	char*		serport;
 	char*		zipfile;
 };
 
