@@ -5,6 +5,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <zip.h>
+
 #include "conf.h"
 #include "log.h"
 #include "serialtty.h"
@@ -55,17 +57,52 @@ static void main_options(int argc, char* argv[])
 
 int main(int argc, char *argv[])
 {
-	bool ret;
+	int ret;
 	main_options(argc, argv);
+	char buf[200];
 
-	FILE* fp1 = fopen("/home/br1/ble-radar-0.0-35-gc6cff41-DFU/ble-radar-0.0-35-gc6cff41.dat", "r");
-	if (fp1 == NULL) {
-		LOG_ERR("Error opening file");
+	zip_t* zip = zip_open("/home/br1/ble-radar-0.0-35-gc6cff41-DFU.zip", ZIP_RDONLY, NULL);
+	if (zip == NULL) {
+		LOG_ERR("Could not open ZIP file");
 		return EXIT_FAILURE;
 	}
 
-	FILE* fp2 = fopen("/home/br1/ble-radar-0.0-35-gc6cff41-DFU/ble-radar-0.0-35-gc6cff41.bin", "r");
-	if (fp2 == NULL) {
+	zip_file_t* zf = zip_fopen(zip, "manifest.json", 0);
+	if (zf == NULL) {
+		LOG_ERR("Unexpected ZIP file contents");
+		zip_close(zip);
+		return EXIT_FAILURE;
+	}
+	zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
+	LOG_INF("MANI %s", buf);
+	// TODO: read JSON
+
+	struct zip_stat stat;
+	zip_stat_init(&stat);
+	ret = zip_stat(zip, "ble-radar-0.0-35-gc6cff41.dat", 0, &stat);
+	if (ret < 0) {
+		LOG_ERR("Unexpected ZIP file contents1");
+		zip_close(zip);
+		return EXIT_FAILURE;
+	}
+	size_t zs1 = stat.size;
+	zip_file_t* zf1 = zip_fopen_index(zip, stat.index, 0);
+	if (zf1 == NULL) {
+		LOG_ERR("Error opening ZIP file");
+		zip_close(zip);
+		return EXIT_FAILURE;
+	}
+
+	zip_stat_init(&stat);
+	ret = zip_stat(zip, "ble-radar-0.0-35-gc6cff41.bin", 0, &stat);
+	if (ret < 0) {
+		LOG_ERR("Unexpected ZIP file contents2");
+		zip_close(zip);
+		return EXIT_FAILURE;
+	}
+	size_t zs2 = stat.size;
+	zip_file_t* zf2 = zip_fopen_index(zip, stat.index, 0);
+	if (zf2 == NULL) {
 		LOG_ERR("Error opening file");
 		return EXIT_FAILURE;
 	}
@@ -81,9 +118,10 @@ int main(int argc, char *argv[])
 
 	dfu_set_packet_receive_notification(0);
 	dfu_get_serial_mtu();
-	dfu_object_write_procedure(1, fp1);
 
-	dfu_object_write_procedure(2, fp2);
+	dfu_object_write_procedure(1, zf1, zs1);
+	dfu_object_write_procedure(2, zf2, zs2);
 
+	zip_close(zip);
 	serial_fini(ser_fd);
 }

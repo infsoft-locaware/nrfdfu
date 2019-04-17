@@ -310,18 +310,22 @@ bool dfu_create_object(uint8_t type, uint32_t size)
 }
 
 
-bool dfu_object_write(FILE* fp)
+bool dfu_object_write(zip_file_t* zf, size_t size)
 {
 	uint8_t fbuf[(mtu-1)/2];
 	size_t written = 0;
+	zip_int64_t len;
 
 	LOG_INF("Write data (MTU %d buf %zd)", mtu, sizeof(fbuf));
 
 	do {
 		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
-		size_t len = fread(fbuf + 1, 1, sizeof(fbuf) - 1, fp);
-		if (len == 0) {
-			LOG_ERR("fread error");
+		len = zip_fread(zf, fbuf + 1, sizeof(fbuf) - 1);
+		if (len < 0) {
+			LOG_ERR("zip_fread error");
+			break;
+		}
+		if (len == 0) { // EOF
 			break;
 		}
 		bool b = encode_write(fbuf, len + 1);
@@ -331,7 +335,7 @@ bool dfu_object_write(FILE* fp)
 		}
 		written += len;
 		crc = crc32(crc, fbuf+1, len);
-	} while (!feof(fp) && written < max_size);
+	} while (len > 0 && written < size && written < max_size);
 
 	// No response expected
 	LOG_INF("Wrote %zd bytes CRC %lu", written, crc);
@@ -389,17 +393,15 @@ static size_t get_file_size(FILE* fp)
 	return sz;
 }
 
-bool dfu_object_write_procedure(uint8_t type, FILE* fp)
+bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 {
-	size_t sz = get_file_size(fp);
-
 	dfu_select_object(type);
 	crc = crc32(0L, Z_NULL, 0);
 
 	/* create and write objects of max_size */
 	for (int i=0; i < sz; i += max_size) {
 		dfu_create_object(type, MIN(sz-i, max_size));
-		dfu_object_write(fp);
+		dfu_object_write(zf, sz);
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != crc) {
 			LOG_ERR("CRC failed %u %lu", rcrc, crc);
