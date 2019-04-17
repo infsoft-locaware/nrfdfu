@@ -145,20 +145,20 @@ static const char* dfu_err_str(nrf_dfu_result_t res)
 static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
 	bool succ = read_decode();
-
 	if (!succ) {
+		LOG_ERR("Read or decode failed");
 		return NULL;
 	}
 
 	if (buf[0] != NRF_DFU_OP_RESPONSE) {
-		LOG_ERR("no response");
+		LOG_ERR("No response");
 		return NULL;
 	}
 
 	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(buf + 1);
 
 	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
-		LOG_ERR("Error %s", dfu_err_str(resp->result));
+		LOG_ERR("Response Error %s", dfu_err_str(resp->result));
 		return NULL;
 	}
 
@@ -178,11 +178,14 @@ bool dfu_ping(void)
 		.request = NRF_DFU_OP_PING,
 		.ping.id = ping_id++,
 	};
-	send_request(&req);
-	nrf_dfu_response_t* resp = get_response(req.request);
 
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
-		LOG_ERR("No ping response");
 		return false;
 	}
 
@@ -196,11 +199,14 @@ bool dfu_set_packet_receive_notification(uint32_t prn)
 		.request = NRF_DFU_OP_RECEIPT_NOTIF_SET,
 		.prn.target = prn,
 	};
-	send_request(&req);
-	nrf_dfu_response_t* resp = get_response(req.request);
 
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
-		LOG_ERR("No response");
 		return false;
 	}
 
@@ -213,11 +219,14 @@ bool dfu_get_serial_mtu(void)
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_MTU_GET,
 	};
-	send_request(&req);
-	nrf_dfu_response_t* resp = get_response(req.request);
 
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
-		LOG_ERR("No response");
 		return false;
 	}
 
@@ -231,11 +240,14 @@ bool dfu_select_object(uint32_t type)
 		.request = NRF_DFU_OP_OBJECT_SELECT,
 		.select.object_type = type,
 	};
-	send_request(&req);
-	nrf_dfu_response_t* resp = get_response(req.request);
 
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
-		LOG_ERR("No response");
 		return false;
 	}
 
@@ -251,11 +263,14 @@ bool dfu_create_object(uint32_t type, uint32_t size)
 		.create.object_type = type,
 		.create.object_size = size,
 	};
-	send_request(&req);
-	nrf_dfu_response_t* resp = get_response(req.request);
 
+	bool b = send_request(&req);
+	if (!b) {
+		return false;
+	}
+
+	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
-		LOG_ERR("No response");
 		return false;
 	}
 
