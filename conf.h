@@ -7,7 +7,7 @@
 #define CONF_MAX_LEN	200
 
 struct config {
-	bool		debug;
+	int		debug;
 	char		serport[CONF_MAX_LEN];
 };
 
