@@ -14,14 +14,16 @@ static uint8_t write_buf[BUF_SIZE];
 static uint8_t slip_buf[SLIP_BUF_SIZE];
 extern int ser_fd;
 
-static void encode_write(nrf_dfu_request_t* req, size_t len)
+static bool encode_write(nrf_dfu_request_t* req, size_t len)
 {
 	uint32_t slip_len;
 	ssize_t ret;
 	slip_encode(slip_buf, (uint8_t*)req, len, &slip_len);
 	ret = write(ser_fd, slip_buf, slip_len);
-	if (ret < slip_len)
+	if (ret < slip_len) {
 		LOG_ERR("write error");
+		return false;
+	}
 #if 1
 	printf("[TX: ");
 	for (int i=0; i < len; i++) {
@@ -29,7 +31,47 @@ static void encode_write(nrf_dfu_request_t* req, size_t len)
 	}
 	printf("]\n");
 #endif
+	return true;
+}
 
+static size_t request_size(nrf_dfu_request_t* req)
+{
+	switch (req->request) {
+		case NRF_DFU_OP_OBJECT_CREATE:
+			return 1 + sizeof(req->create);
+		case NRF_DFU_OP_RECEIPT_NOTIF_SET:
+			return 1 + sizeof(req->prn);
+		case NRF_DFU_OP_OBJECT_SELECT:
+			return 1 + sizeof(req->select);
+		case NRF_DFU_OP_MTU_GET:
+			return 1; // NOT sizeof(req->mtu);
+		case NRF_DFU_OP_OBJECT_WRITE:
+			return 1 + sizeof(req->write);
+		case NRF_DFU_OP_PING:
+			return 1 + sizeof(req->ping);
+		case NRF_DFU_OP_FIRMWARE_VERSION:
+			return 1 + sizeof(req->firmware);
+		case NRF_DFU_OP_PROTOCOL_VERSION:
+		case NRF_DFU_OP_CRC_GET:
+		case NRF_DFU_OP_OBJECT_EXECUTE:
+		case NRF_DFU_OP_HARDWARE_VERSION:
+		case NRF_DFU_OP_ABORT:
+		case NRF_DFU_OP_RESPONSE:
+		case NRF_DFU_OP_INVALID:
+			return 1;
+	}
+	return 0;
+}
+
+static bool send_request(nrf_dfu_request_t* req)
+{
+	size_t size = request_size(req);
+	if (size == 0) {
+		LOG_ERR("Unknown size");
+		return false;
+	}
+
+	return encode_write(req, size);
 }
 
 static bool read_decode(void)
@@ -98,7 +140,7 @@ bool dfu_ping(void)
 		.request = NRF_DFU_OP_PING,
 		.ping.id = ping_id++,
 	};
-	encode_write(&req, 2);
+	send_request(&req);
 	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
@@ -116,7 +158,7 @@ bool dfu_set_packet_receive_notification(uint32_t prn)
 		.request = NRF_DFU_OP_RECEIPT_NOTIF_SET,
 		.prn.target = prn,
 	};
-	encode_write(&req, 3);
+	send_request(&req);
 	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
@@ -133,7 +175,7 @@ bool dfu_get_serial_mtu(void)
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_MTU_GET,
 	};
-	encode_write(&req, 1);
+	send_request(&req);
 	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
@@ -151,7 +193,7 @@ bool dfu_read_object(uint32_t type)
 		.request = NRF_DFU_OP_OBJECT_SELECT,
 		.select.object_type = type,
 	};
-	encode_write(&req, 2);
+	send_request(&req);
 	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
@@ -171,8 +213,7 @@ bool dfu_create_object(uint32_t type, uint32_t size)
 		.create.object_type = type,
 		.create.object_size = size,
 	};
-	LOG_INF("sixz %zd", sizeof(req.create));
-	encode_write(&req, 1 + sizeof(req.create));
+	send_request(&req);
 	nrf_dfu_response_t* resp = get_response(req.request);
 
 	if (!resp) {
