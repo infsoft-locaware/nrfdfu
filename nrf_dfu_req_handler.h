@@ -160,8 +160,9 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t offset;                    //!< Current offset
-    uint32_t crc;                       //!< Current CRC.
+    //TODO not used in Bootloader
+    //uint32_t offset;                    //!< Current offset
+    //uint32_t crc;                       //!< Current CRC.
 } nrf_dfu_response_create_t;
 
 /**
@@ -249,8 +250,9 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t  const * p_data; //!< Data.
-    uint16_t         len;    //!< Length of data in @ref nrf_dfu_request_write_t::p_data.
+    //TODO not usable
+    //uint8_t  const * p_data; //!< Data.
+    //uint16_t         len;    //!< Length of data in @ref nrf_dfu_request_write_t::p_data.
 } nrf_dfu_request_write_t;
 
 /**
@@ -266,7 +268,8 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t size;          //!< Transport MTU size in bytes.
+    //TODO not used in Bootloader
+    //uint16_t size;          //!< Transport MTU size in bytes.
 } nrf_dfu_request_mtu_t;
 
 /**
@@ -274,11 +277,9 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t target;        //!< Target PRN.
+    uint16_t target;        //!< Target PRN.
 } nrf_dfu_request_prn_t;
 
-
-typedef void (*nrf_dfu_response_callback_t)(nrf_dfu_response_t * p_res, void * p_context);
 
 /**
  *@brief DFU request.

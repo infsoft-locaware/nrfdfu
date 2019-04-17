@@ -196,7 +196,7 @@ bool dfu_ping(void)
 	return (resp->ping.id == ping_id-1);
 }
 
-bool dfu_set_packet_receive_notification(uint32_t prn)
+bool dfu_set_packet_receive_notification(uint16_t prn)
 {
 	LOG_INF("Set packet receive notification %d", prn);
 	nrf_dfu_request_t req = {
@@ -238,7 +238,7 @@ bool dfu_get_serial_mtu(void)
 	return true;
 }
 
-bool dfu_select_object(uint32_t type)
+bool dfu_select_object(uint8_t type)
 {
 	LOG_INF("Select object %x", type);
 	nrf_dfu_request_t req = {
@@ -261,7 +261,7 @@ bool dfu_select_object(uint32_t type)
 	return true;
 }
 
-bool dfu_create_object(uint32_t type, uint32_t size)
+bool dfu_create_object(uint8_t type, uint32_t size)
 {
 	LOG_INF("Create object %x (%d)", type, size);
 	nrf_dfu_request_t req = {
