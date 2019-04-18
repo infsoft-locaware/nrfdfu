@@ -1,18 +1,14 @@
-#include <stdio.h>
-#include <unistd.h>
-
 #include <zlib.h>
 
 #include "dfu.h"
 #include "dfuserial.h"
 #include "nrf_dfu_req_handler.h"
 #include "log.h"
-#include "conf.h"
 #include "util.h"
 
-static uint16_t mtu;
-static uint32_t max_size;
-static uLong crc;
+static uint16_t dfu_mtu;
+static uint32_t dfu_max_size;
+static uLong dfu_current_crc;
 
 static size_t request_size(nrf_dfu_request_t* req)
 {
@@ -181,12 +177,13 @@ bool dfu_get_serial_mtu(void)
 		return false;
 	}
 
-	mtu = resp->mtu.size;
-	if (mtu > SLIP_BUF_SIZE) {
-		LOG_WARN("MTU of %d limited to buffer size %d", mtu, SLIP_BUF_SIZE);
-		mtu = SLIP_BUF_SIZE;
+	dfu_mtu = resp->mtu.size;
+	if (dfu_mtu > SLIP_BUF_SIZE) {
+		LOG_WARN("MTU of %d limited to buffer size %d", dfu_mtu,
+			 SLIP_BUF_SIZE);
+		dfu_mtu = SLIP_BUF_SIZE;
 	}
-	LOG_INF("%d", mtu);
+	LOG_INF("%d", dfu_mtu);
 	return true;
 }
 
@@ -210,7 +207,7 @@ bool dfu_select_object(uint8_t type)
 
 	LOG_INF("offset %u max_size %u CRC 0x%X",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
-	max_size = resp->select.max_size;
+	dfu_max_size = resp->select.max_size;
 	return true;
 }
 
@@ -240,11 +237,11 @@ bool dfu_create_object(uint8_t type, uint32_t size)
 
 bool dfu_object_write(zip_file_t* zf, size_t size)
 {
-	uint8_t fbuf[(mtu-1)/2];
+	uint8_t fbuf[(dfu_mtu-1)/2];
 	size_t written = 0;
 	zip_int64_t len;
 
-	LOG_INF_("Write data (MTU %d buf %zd): ", mtu, sizeof(fbuf));
+	LOG_INF_("Write data (MTU %d buf %zd): ", dfu_mtu, sizeof(fbuf));
 
 	do {
 		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
@@ -262,11 +259,11 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 			return false;
 		}
 		written += len;
-		crc = crc32(crc, fbuf+1, len);
-	} while (len > 0 && written < size && written < max_size);
+		dfu_current_crc = crc32(dfu_current_crc, fbuf+1, len);
+	} while (len > 0 && written < size && written < dfu_max_size);
 
 	// No response expected
-	LOG_INF("%zd bytes CRC: 0x%lX", written, crc);
+	LOG_INF("%zd bytes CRC: 0x%lX", written, dfu_current_crc);
 	return true;
 }
 
@@ -316,15 +313,15 @@ bool dfu_object_execute(void)
 bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 {
 	dfu_select_object(type);
-	crc = crc32(0L, Z_NULL, 0);
+	dfu_current_crc = crc32(0L, Z_NULL, 0);
 
 	/* create and write objects of max_size */
-	for (int i=0; i < sz; i += max_size) {
-		dfu_create_object(type, MIN(sz-i, max_size));
+	for (int i=0; i < sz; i += dfu_max_size) {
+		dfu_create_object(type, MIN(sz-i, dfu_max_size));
 		dfu_object_write(zf, sz);
 		uint32_t rcrc = dfu_get_crc();
-		if (rcrc != crc) {
-			LOG_ERR("CRC failed 0x%X vs 0x%lX", rcrc, crc);
+		if (rcrc != dfu_current_crc) {
+			LOG_ERR("CRC failed 0x%X vs 0x%lX", rcrc, dfu_current_crc);
 			return false;
 		}
 		dfu_object_execute();
