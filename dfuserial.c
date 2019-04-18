@@ -91,13 +91,12 @@ const char* ser_read_decode(void)
 			break;
 		}
 		ret = read(ser_fd, &read_buf, 1);
-		if (ret > 0) {
+		if (ret < 0 && errno != EAGAIN) {
+			LOG_ERR("Read error: %d %s", errno, strerror(errno));
+			break;
+		}
+		else if (ret > 0) {
 			end = slip_decode_add_byte(&slip, read_buf);
-			if (end != -3) { // if not "busy": error or finished
-				if (end != 1)
-					LOG_ERR("Slip err %d", end);
-				break;
-			}
 		}
 	} while (end != 1);
 

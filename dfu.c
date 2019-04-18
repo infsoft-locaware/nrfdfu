@@ -91,7 +91,7 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
 	const char* buf = ser_read_decode();
 	if (!buf) {
-		LOG_ERR("Read or decode failed");
+		/* error printed in function above */
 		return NULL;
 	}
 
