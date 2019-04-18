@@ -9,7 +9,8 @@
 #include "log.h"
 #include "conf.h"
 
-#define MAX_READ_TRIES	10000
+#define MAX_READ_TRIES		10000
+#define SERIAL_TIMEOUT_SEC	1
 
 static uint8_t buf[SLIP_BUF_SIZE];
 
@@ -37,7 +38,7 @@ bool ser_encode_write(uint8_t* req, size_t len)
 		if (ret == -1) {
 			if (errno == EAGAIN) {
 				/* write would block, wait until ready again */
-				wait_serial_write_ready(1);
+				wait_serial_write_ready(SERIAL_TIMEOUT_SEC);
 				continue;
 			} else {
 				/* grave error */
@@ -89,7 +90,7 @@ const char* ser_read_decode(void)
 
 	do {
 		read_tries++;
-		bool timeout = wait_serial_read_ready(3);
+		bool timeout = wait_serial_read_ready(SERIAL_TIMEOUT_SEC);
 		if (timeout) {
 			LOG_INF("Timeout on Serial RX");
 			break;
