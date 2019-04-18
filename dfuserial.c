@@ -76,7 +76,7 @@ static bool wait_serial_read_ready(int sec)
 	return ret <= 0; // error or timeout
 }
 
-const char* ser_read_decode(void)
+const uint8_t* ser_read_decode(void)
 {
 	ssize_t ret;
 	slip_t slip;

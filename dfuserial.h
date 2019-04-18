@@ -10,6 +10,6 @@
 #define SLIP_BUF_SIZE	(BUF_SIZE * 2 + 1)
 
 bool ser_encode_write(uint8_t* req, size_t len);
-const char* ser_read_decode(void);
+const uint8_t* ser_read_decode(void);
 
 #endif

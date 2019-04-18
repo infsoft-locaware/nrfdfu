@@ -89,7 +89,7 @@ static const char* dfu_err_str(nrf_dfu_result_t res)
 
 static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
-	const char* buf = ser_read_decode();
+	const uint8_t* buf = ser_read_decode();
 	if (!buf) {
 		/* error printed in function above */
 		return NULL;
