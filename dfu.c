@@ -112,7 +112,7 @@ static bool send_request(nrf_dfu_request_t* req)
 	return encode_write((uint8_t*)req, size);
 }
 
-static bool wait_serial_ready(int sec)
+static bool wait_serial_read_ready(int sec)
 {
 	struct timeval tv = {};
 	fd_set fds = {};
@@ -135,7 +135,7 @@ static bool read_decode(void)
 	char read_buf;
 
 	do {
-		bool timeout = wait_serial_ready(3);
+		bool timeout = wait_serial_read_ready(3);
 		if (timeout) {
 			LOG_INF("Timeout on Serial RX");
 			break;
