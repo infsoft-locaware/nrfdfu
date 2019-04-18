@@ -9,6 +9,8 @@
 #include "log.h"
 #include "conf.h"
 
+#define MAX_READ_TRIES	10000
+
 static uint8_t buf[SLIP_BUF_SIZE];
 
 extern int ser_fd;
@@ -83,8 +85,10 @@ const char* ser_read_decode(void)
 	slip.state = SLIP_STATE_DECODING;
 	int end = 0;
 	char read_buf;
+	int read_tries = 0;
 
 	do {
+		read_tries++;
 		bool timeout = wait_serial_read_ready(3);
 		if (timeout) {
 			LOG_INF("Timeout on Serial RX");
@@ -98,7 +102,7 @@ const char* ser_read_decode(void)
 		else if (ret > 0) {
 			end = slip_decode_add_byte(&slip, read_buf);
 		}
-	} while (end != 1);
+	} while (end != 1 || read_tries > MAX_READ_TRIES);
 
 	if (conf.debug > 2) {
 		printf("[ RX: ");
