@@ -79,18 +79,21 @@ static bool wait_serial_read_ready(int sec)
 const uint8_t* ser_read_decode(void)
 {
 	ssize_t ret;
-	slip_t slip;
-	slip.p_buffer = buf;
-	slip.current_index = 0;
-	slip.buffer_len = BUF_SIZE;
-	slip.state = SLIP_STATE_DECODING;
 	int end = 0;
 	char read_buf;
 	int read_tries = 0;
+	bool timeout;
+
+	slip_t slip = {
+		.p_buffer = buf,
+		.current_index = 0,
+		.buffer_len = BUF_SIZE,
+		.state = SLIP_STATE_DECODING
+	};
 
 	do {
 		read_tries++;
-		bool timeout = wait_serial_read_ready(SERIAL_TIMEOUT_SEC);
+		timeout = wait_serial_read_ready(SERIAL_TIMEOUT_SEC);
 		if (timeout) {
 			LOG_INF("Timeout on Serial RX");
 			break;
