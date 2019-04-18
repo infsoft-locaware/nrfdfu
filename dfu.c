@@ -1,76 +1,18 @@
 #include <stdio.h>
 #include <unistd.h>
-#include <sys/select.h>
-#include <errno.h>
-#include <string.h>
 
 #include <zlib.h>
 
 #include "dfu.h"
+#include "dfuserial.h"
 #include "nrf_dfu_req_handler.h"
 #include "log.h"
-#include "slip.h"
 #include "conf.h"
 #include "util.h"
 
-/* SLIP buffer size should be bigger than MTU */
-#define BUF_SIZE	100
-#define SLIP_BUF_SIZE	(BUF_SIZE * 2 + 1)
-
-static uint8_t buf[SLIP_BUF_SIZE];
 static uint16_t mtu;
 static uint32_t max_size;
-extern int ser_fd;
 static uLong crc;
-
-static bool wait_serial_write_ready(int sec)
-{
-	struct timeval tv = {};
-	fd_set fds = {};
-	tv.tv_sec = sec;
-	FD_ZERO(&fds);
-	FD_SET(ser_fd, &fds);
-	int ret = select(ser_fd+1, NULL, &fds, NULL, &tv);
-	return ret <= 0; // error or timeout
-}
-
-static bool encode_write(uint8_t* req, size_t len)
-{
-	uint32_t slip_len;
-	ssize_t ret;
-	size_t pos = 0;
-	slip_encode(buf, (uint8_t*)req, len, &slip_len);
-	do {
-		ret = write(ser_fd, buf + pos, slip_len - pos);
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				/* write would block, wait until ready again */
-				wait_serial_write_ready(1);
-				continue;
-			} else {
-				/* grave error */
-				LOG_ERR("ERR: write error: %d %s", errno, strerror(errno));
-				return false;
-			}
-		}
-		else if (ret < slip_len - pos) {
-			/* partial writes usually mean next write would return
-			 * EAGAIN, so just wait until it's ready again */
-			wait_serial_write_ready(1);
-		}
-		pos += ret;
-	} while (pos < slip_len);
-
-	if (conf.debug > 2) {
-		printf("[ TX: ");
-		for (int i=0; i < len; i++) {
-			printf("%d ", *(req+i));
-		}
-		printf("]\n");
-	}
-
-	return true;
-}
 
 static size_t request_size(nrf_dfu_request_t* req)
 {
@@ -109,58 +51,9 @@ static bool send_request(nrf_dfu_request_t* req)
 		return false;
 	}
 
-	return encode_write((uint8_t*)req, size);
+	return ser_encode_write((uint8_t*)req, size);
 }
 
-static bool wait_serial_read_ready(int sec)
-{
-	struct timeval tv = {};
-	fd_set fds = {};
-	tv.tv_sec = sec;
-	FD_ZERO(&fds);
-	FD_SET(ser_fd, &fds);
-	int ret = select(ser_fd+1, &fds, NULL, NULL, &tv);
-	return ret <= 0; // error or timeout
-}
-
-static bool read_decode(void)
-{
-	ssize_t ret;
-	slip_t slip;
-	slip.p_buffer = buf;
-	slip.current_index = 0;
-	slip.buffer_len = BUF_SIZE;
-	slip.state = SLIP_STATE_DECODING;
-	int end = 0;
-	char read_buf;
-
-	do {
-		bool timeout = wait_serial_read_ready(3);
-		if (timeout) {
-			LOG_INF("Timeout on Serial RX");
-			break;
-		}
-		ret = read(ser_fd, &read_buf, 1);
-		if (ret > 0) {
-			end = slip_decode_add_byte(&slip, read_buf);
-			if (end != -3) { // if not "busy": error or finished
-				if (end != 1)
-					LOG_ERR("Slip err %d", end);
-				break;
-			}
-		}
-	} while (end != 1);
-
-	if (conf.debug > 2) {
-		printf("[ RX: ");
-		for (int i=0; i < slip.current_index; i++) {
-			printf("%d ", slip.p_buffer[i]);
-		}
-		printf("]\n");
-	}
-
-	return (end == 1);
-}
 
 static const char* dfu_err_str(nrf_dfu_result_t res)
 {
@@ -196,8 +89,8 @@ static const char* dfu_err_str(nrf_dfu_result_t res)
 
 static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
-	bool succ = read_decode();
-	if (!succ) {
+	const char* buf = ser_read_decode();
+	if (!buf) {
 		LOG_ERR("Read or decode failed");
 		return NULL;
 	}
@@ -363,7 +256,7 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 		if (len == 0) { // EOF
 			break;
 		}
-		bool b = encode_write(fbuf, len + 1);
+		bool b = ser_encode_write(fbuf, len + 1);
 		if (!b) {
 			LOG_ERR("write failed");
 			return false;
