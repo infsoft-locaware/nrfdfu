@@ -208,7 +208,7 @@ uint32_t dfu_get_crc(void)
 	return resp->crc.crc;
 }
 
-bool dfu_object_select(uint8_t type)
+bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
 {
 	LOG_INF_("Select object %d: ", type);
 	nrf_dfu_request_t req = {
@@ -229,6 +229,8 @@ bool dfu_object_select(uint8_t type)
 	LOG_INF("offset %u max_size %u CRC 0x%X",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
 	dfu_max_size = resp->select.max_size;
+	*offset = resp->select.offset;
+	*crc = resp->select.crc;
 	return true;
 }
 
@@ -261,12 +263,14 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 	uint8_t fbuf[(dfu_mtu-1)/2];
 	size_t written = 0;
 	zip_int64_t len;
+	size_t to_read;
 
 	LOG_INF_("Write data (MTU %d buf %zd): ", dfu_mtu, sizeof(fbuf));
 
 	do {
 		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
-		len = zip_fread(zf, fbuf + 1, sizeof(fbuf) - 1);
+		to_read = MIN(sizeof(fbuf) - 1, size - written);
+		len = zip_fread(zf, fbuf + 1, to_read);
 		if (len < 0) {
 			LOG_ERR("zip_fread error");
 			break;
@@ -310,13 +314,77 @@ bool dfu_object_execute(void)
 	return true;
 }
 
+/* get CRC of contents of ZIP file until size */
+static uLong zip_crc_move(zip_file_t* zf, size_t size)
+{
+	uint8_t fbuf[200];
+	size_t read = 0;
+	size_t to_read;
+	zip_int64_t len;
+	uLong crc = crc32(0L, Z_NULL, 0);
+
+	do {
+		to_read = MIN(sizeof(fbuf), size - read);
+		len = zip_fread(zf, fbuf, to_read);
+		if (len < 0) {
+			LOG_ERR("zip_fread error");
+			break;
+		}
+		if (len == 0) { // EOF
+			break;
+		}
+		read += len;
+		crc = crc32(crc, fbuf, len);
+	} while (len > 0 && read < size);
+
+	return crc;
+}
+
 bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 {
-	dfu_object_select(type);
-	dfu_current_crc = crc32(0L, Z_NULL, 0);
+	uint32_t offset;
+	uint32_t crc;
+
+	dfu_object_select(type, &offset, &crc);
+
+	/* object with same length and CRC already received */
+	if (offset == sz && zip_crc_move(zf, sz) == crc) {
+		LOG_INF("Object already received");
+		/* Don't transfer anything and skip to the Execute command */
+		dfu_object_execute();
+		return true;
+	}
+
+	/* parts already received */
+	if (offset > 0) {
+		uint32_t remain = offset % dfu_max_size;
+		LOG_INF("Object partially received offset %u remaining %u",
+			offset, remain);
+
+		dfu_current_crc = zip_crc_move(zf, offset);
+		if (crc != dfu_current_crc) {
+			/* invalid crc, remove corrupted data, rewind and
+			 * create new object below */
+			LOG_INF("CRC does not match");
+			offset -= remain > 0 ? remain : dfu_max_size;
+			zip_fseek(zf, 0, 0);
+			dfu_current_crc = zip_crc_move(zf, offset);
+		}
+		else if (offset < sz) { /* CRC matches */
+			/* transfer remaining data if necessary */
+			if (remain > 0) {
+				size_t end = offset + dfu_max_size - remain;
+				dfu_object_write(zf, end);
+			}
+			dfu_object_execute();
+		}
+	}
+	else if (offset == 0) {
+		dfu_current_crc = crc32(0L, Z_NULL, 0);
+	}
 
 	/* create and write objects of max_size */
-	for (int i=0; i < sz; i += dfu_max_size) {
+	for (int i = offset; i < sz; i += dfu_max_size) {
 		dfu_object_create(type, MIN(sz-i, dfu_max_size));
 		dfu_object_write(zf, sz);
 		uint32_t rcrc = dfu_get_crc();
