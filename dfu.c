@@ -187,7 +187,28 @@ bool dfu_get_serial_mtu(void)
 	return true;
 }
 
-bool dfu_select_object(uint8_t type)
+uint32_t dfu_get_crc(void)
+{
+	LOG_INF_("Get CRC: ");
+	nrf_dfu_request_t req = {
+		.request = NRF_DFU_OP_CRC_GET,
+	};
+
+	bool b = send_request(&req);
+	if (!b) {
+		return 0;
+	}
+
+	nrf_dfu_response_t* resp = get_response(req.request);
+	if (!resp) {
+		return 0;
+	}
+
+	LOG_INF("0x%X (offset %u)", resp->crc.crc, resp->crc.offset);
+	return resp->crc.crc;
+}
+
+bool dfu_object_select(uint8_t type)
 {
 	LOG_INF_("Select object %d: ", type);
 	nrf_dfu_request_t req = {
@@ -211,7 +232,7 @@ bool dfu_select_object(uint8_t type)
 	return true;
 }
 
-bool dfu_create_object(uint8_t type, uint32_t size)
+bool dfu_object_create(uint8_t type, uint32_t size)
 {
 	LOG_INF_("Create object %d (size %u): ", type, size);
 	nrf_dfu_request_t req = {
@@ -267,27 +288,6 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 	return true;
 }
 
-uint32_t dfu_get_crc(void)
-{
-	LOG_INF_("Get CRC: ");
-	nrf_dfu_request_t req = {
-		.request = NRF_DFU_OP_CRC_GET,
-	};
-
-	bool b = send_request(&req);
-	if (!b) {
-		return 0;
-	}
-
-	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
-		return 0;
-	}
-
-	LOG_INF("0x%X (offset %u)", resp->crc.crc, resp->crc.offset);
-	return resp->crc.crc;
-}
-
 /** this writes the object to flash */
 bool dfu_object_execute(void)
 {
@@ -312,12 +312,12 @@ bool dfu_object_execute(void)
 
 bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 {
-	dfu_select_object(type);
+	dfu_object_select(type);
 	dfu_current_crc = crc32(0L, Z_NULL, 0);
 
 	/* create and write objects of max_size */
 	for (int i=0; i < sz; i += dfu_max_size) {
-		dfu_create_object(type, MIN(sz-i, dfu_max_size));
+		dfu_object_create(type, MIN(sz-i, dfu_max_size));
 		dfu_object_write(zf, sz);
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != dfu_current_crc) {
