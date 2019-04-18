@@ -1,3 +1,5 @@
+#include <endian.h>
+
 #include <zlib.h>
 
 #include "dfu.h"
@@ -143,7 +145,7 @@ bool dfu_set_packet_receive_notification(uint16_t prn)
 	LOG_INF_("Set packet receive notification %d: ", prn);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_RECEIPT_NOTIF_SET,
-		.prn.target = prn,
+		.prn.target = htole16(prn),
 	};
 
 	bool b = send_request(&req);
@@ -177,7 +179,7 @@ bool dfu_get_serial_mtu(void)
 		return false;
 	}
 
-	dfu_mtu = resp->mtu.size;
+	dfu_mtu = le16toh(resp->mtu.size);
 	if (dfu_mtu > SLIP_BUF_SIZE) {
 		LOG_WARN("MTU of %d limited to buffer size %d", dfu_mtu,
 			 SLIP_BUF_SIZE);
@@ -204,8 +206,8 @@ uint32_t dfu_get_crc(void)
 		return 0;
 	}
 
-	LOG_INF("0x%X (offset %u)", resp->crc.crc, resp->crc.offset);
-	return resp->crc.crc;
+	LOG_INF("0x%X (offset %u)", le32toh(resp->crc.crc), le32toh(resp->crc.offset));
+	return le32toh(resp->crc.crc);
 }
 
 bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
@@ -226,11 +228,10 @@ bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
 		return false;
 	}
 
-	LOG_INF("offset %u max_size %u CRC 0x%X",
-		resp->select.offset, resp->select.max_size, resp->select.crc);
-	dfu_max_size = resp->select.max_size;
-	*offset = resp->select.offset;
-	*crc = resp->select.crc;
+	dfu_max_size = le32toh(resp->select.max_size);
+	*offset = le32toh(resp->select.offset);
+	*crc = le32toh(resp->select.crc);
+	LOG_INF("offset %u max_size %u CRC 0x%X", *offset, dfu_max_size, *crc);
 	return true;
 }
 
@@ -240,7 +241,7 @@ bool dfu_object_create(uint8_t type, uint32_t size)
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_OBJECT_CREATE,
 		.create.object_type = type,
-		.create.object_size = size,
+		.create.object_size = htole32(size),
 	};
 
 	bool b = send_request(&req);
