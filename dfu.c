@@ -225,7 +225,7 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 bool dfu_ping(void)
 {
 	static uint8_t ping_id = 1;
-	LOG_INF("Sending ping %d", ping_id);
+	LOG_INF_("Sending ping %d", ping_id);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_PING,
 		.ping.id = ping_id++,
@@ -246,7 +246,7 @@ bool dfu_ping(void)
 
 bool dfu_set_packet_receive_notification(uint16_t prn)
 {
-	LOG_INF("Set packet receive notification %d", prn);
+	LOG_INF_("Set packet receive notification %d", prn);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_RECEIPT_NOTIF_SET,
 		.prn.target = prn,
@@ -262,12 +262,13 @@ bool dfu_set_packet_receive_notification(uint16_t prn)
 		return false;
 	}
 
+	LOG_INF(": done");
 	return true;
 }
 
 bool dfu_get_serial_mtu(void)
 {
-	LOG_INF("Get serial MTU");
+	LOG_INF_("Get serial MTU");
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_MTU_GET,
 	};
@@ -287,13 +288,13 @@ bool dfu_get_serial_mtu(void)
 		LOG_WARN("MTU of %d limited to buffer size %d", mtu, SLIP_BUF_SIZE);
 		mtu = SLIP_BUF_SIZE;
 	}
-	LOG_INF("Serial MTU %d", mtu);
+	LOG_INF(": %d", mtu);
 	return true;
 }
 
 bool dfu_select_object(uint8_t type)
 {
-	LOG_INF("Select object %x", type);
+	LOG_INF_("Select object %d", type);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_OBJECT_SELECT,
 		.select.object_type = type,
@@ -309,7 +310,7 @@ bool dfu_select_object(uint8_t type)
 		return false;
 	}
 
-	LOG_INF("Selected object offset: %u max_size: %u crc: %u",
+	LOG_INF(": offset %u max_size %u CRC 0x%X",
 		resp->select.offset, resp->select.max_size, resp->select.crc);
 	max_size = resp->select.max_size;
 	return true;
@@ -317,7 +318,7 @@ bool dfu_select_object(uint8_t type)
 
 bool dfu_create_object(uint8_t type, uint32_t size)
 {
-	LOG_INF("Create object %x (%u)", type, size);
+	LOG_INF_("Create object %d (size %u)", type, size);
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_OBJECT_CREATE,
 		.create.object_type = type,
@@ -334,7 +335,7 @@ bool dfu_create_object(uint8_t type, uint32_t size)
 		return false;
 	}
 
-	LOG_INF("Created object");
+	LOG_INF(": done");
 	return true;
 }
 
@@ -345,7 +346,7 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 	size_t written = 0;
 	zip_int64_t len;
 
-	LOG_INF("Write data (MTU %d buf %zd)", mtu, sizeof(fbuf));
+	LOG_INF_("Write data (MTU %d buf %zd)", mtu, sizeof(fbuf));
 
 	do {
 		fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
@@ -367,13 +368,13 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 	} while (len > 0 && written < size && written < max_size);
 
 	// No response expected
-	LOG_INF("Wrote %zd bytes CRC %lu", written, crc);
+	LOG_INF(" %zd bytes CRC: 0x%lX", written, crc);
 	return true;
 }
 
 uint32_t dfu_get_crc(void)
 {
-	LOG_INF("Get CRC");
+	LOG_INF_("Get CRC");
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_CRC_GET,
 	};
@@ -388,14 +389,14 @@ uint32_t dfu_get_crc(void)
 		return 0;
 	}
 
-	LOG_INF("Got CRC %u offset %u", resp->crc.crc, resp->crc.offset);
+	LOG_INF(": 0x%X (offset %u)", resp->crc.crc, resp->crc.offset);
 	return resp->crc.crc;
 }
 
 /** this writes the object to flash */
 bool dfu_object_execute(void)
 {
-	LOG_INF("Object Execute");
+	LOG_INF_("Object Execute");
 	nrf_dfu_request_t req = {
 		.request = NRF_DFU_OP_OBJECT_EXECUTE,
 	};
@@ -410,16 +411,8 @@ bool dfu_object_execute(void)
 		return false;
 	}
 
+	LOG_INF(": done");
 	return true;
-}
-
-static size_t get_file_size(FILE* fp)
-{
-	fseek(fp, 0L, SEEK_END);
-	size_t sz = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
-	LOG_INF("Size %zd", sz);
-	return sz;
 }
 
 bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
@@ -433,7 +426,7 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 		dfu_object_write(zf, sz);
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != crc) {
-			LOG_ERR("CRC failed %u %lu", rcrc, crc);
+			LOG_ERR("CRC failed 0x%X vs 0x%lX", rcrc, crc);
 			return false;
 		}
 		dfu_object_execute();
