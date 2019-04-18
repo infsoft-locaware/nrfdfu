@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/select.h>
+#include <errno.h>
+#include <string.h>
 
 #include <zlib.h>
 
@@ -21,16 +23,43 @@ static uint32_t max_size;
 extern int ser_fd;
 static uLong crc;
 
+static bool wait_serial_write_ready(int sec)
+{
+	struct timeval tv = {};
+	fd_set fds = {};
+	tv.tv_sec = sec;
+	FD_ZERO(&fds);
+	FD_SET(ser_fd, &fds);
+	int ret = select(ser_fd+1, NULL, &fds, NULL, &tv);
+	return ret <= 0; // error or timeout
+}
+
 static bool encode_write(uint8_t* req, size_t len)
 {
 	uint32_t slip_len;
 	ssize_t ret;
+	size_t pos = 0;
 	slip_encode(buf, (uint8_t*)req, len, &slip_len);
-	ret = write(ser_fd, buf, slip_len);
-	if (ret < slip_len) {
-		LOG_ERR("write error");
-		return false;
-	}
+	do {
+		ret = write(ser_fd, buf + pos, slip_len - pos);
+		if (ret == -1) {
+			if (errno == EAGAIN) {
+				/* write would block, wait until ready again */
+				wait_serial_write_ready(1);
+				continue;
+			} else {
+				/* grave error */
+				LOG_ERR("ERR: write error: %d %s", errno, strerror(errno));
+				return false;
+			}
+		}
+		else if (ret < slip_len - pos) {
+			/* partial writes usually mean next write would return
+			 * EAGAIN, so just wait until it's ready again */
+			wait_serial_write_ready(1);
+		}
+		pos += ret;
+	} while (pos < slip_len);
 
 	if (conf.debug > 2) {
 		printf("[ TX: ");
@@ -330,7 +359,7 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 		}
 		bool b = encode_write(fbuf, len + 1);
 		if (!b) {
-			LOG_ERR("enc failed");
+			LOG_ERR("write failed");
 			return false;
 		}
 		written += len;
