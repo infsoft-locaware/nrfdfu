@@ -16,7 +16,7 @@ int ser_fd = -1;
 
 static struct option options[] = {
 	{ "help",	no_argument,		NULL, 'h' },
-	{ "debug",      optional_argument,	NULL, 'd' },
+	{ "verbose",    optional_argument,	NULL, 'v' },
 	{ "port",       required_argument,	NULL, 'p' },
 	{ "cmd",        required_argument,	NULL, 'c' },
 	{ NULL, 0, NULL, 0 }
@@ -28,7 +28,7 @@ static void usage(void)
 			"Nordic NRF DFU Upgrade with DFUPKG.zip\n"
 			"Options:\n"
 			"  -h, --help\t\tShow help\n"
-			"  -d, --debug=<level>\tDebug level (1 or 2)\n"
+			"  -v, --verbose=<level>\tLog level 1 or 2 (-vv)\n"
 			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
 			"  -c, --cmd <text>\tCommand to enter DFU mode\n");
 }
@@ -37,22 +37,22 @@ static void main_options(int argc, char* argv[])
 {
 	/* defaults */
 	conf.serport = "/dev/ttyUSB0";
-	conf.debug = LL_NOTICE;
+	conf.loglevel = LL_NOTICE;
 
 	int n = 0;
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "hd::p:c:", options, NULL);
+		n = getopt_long(argc, argv, "hv::p:c:", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
 		case 'h':
 			usage();
 			break;
-		case 'd':
+		case 'v':
 			if (optarg == NULL)
-				conf.debug = LL_INFO;
-			else if (atoi(optarg) == 2)
-				conf.debug = LL_DEBUG;
+				conf.loglevel = LL_INFO;
+			else if (optarg[0] == 'v' || optarg[0] == '2')
+				conf.loglevel = LL_DEBUG;
 			break;
 		case 'p':
 			conf.serport = optarg;
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
 	/* first check if Bootloader responds to Ping */
 	LOG_NOTI_("Waiting for device to be ready: ");
 	do {
-		if (conf.debug < LL_INFO) {
+		if (conf.loglevel < LL_INFO) {
 			printf("."); fflush(stdout);
 		}
 

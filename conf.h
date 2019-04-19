@@ -7,7 +7,7 @@
 #define CONF_MAX_LEN	200
 
 struct config {
-	int		debug;
+	int		loglevel;
 	char*		serport;
 	char*		zipfile;
 	char*		dfucmd;

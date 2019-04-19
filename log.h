@@ -21,7 +21,7 @@ log_out(enum loglevel ll, bool nl, const char *fmt, ...);
 #define LOG_INF(...) log_out(LL_INFO, true, __VA_ARGS__)
 #define LOG_INF_(...) log_out(LL_INFO, false, __VA_ARGS__)
 #define LOG_DBG(...) do { if (DEBUG) log_out(LL_DEBUG, true, __VA_ARGS__); } while (0)
-#define LOG_DBGL(lvl, ...) do { if (DEBUG && conf.debug >= lvl) log_out(LL_DEBUG, true, __VA_ARGS__); } while (0)
-#define LOG_NL(lvl) if (conf.debug == lvl) log_out(lvl, false, "\n");
+#define LOG_DBGL(lvl, ...) do { if (DEBUG && conf.loglevel >= lvl) log_out(LL_DEBUG, true, __VA_ARGS__); } while (0)
+#define LOG_NL(lvl) if (conf.loglevel == lvl) log_out(lvl, false, "\n");
 
 #endif

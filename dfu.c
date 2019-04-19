@@ -292,7 +292,7 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 	// No response expected
 	LOG_INF("%zd bytes CRC: 0x%X", written, dfu_current_crc);
 
-	if (conf.debug < LL_INFO) {
+	if (conf.loglevel < LL_INFO) {
 		printf("."); fflush(stdout);
 	}
 
