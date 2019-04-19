@@ -26,8 +26,6 @@ int serial_init(const char* dev)
 		return -1;
 	}
 
-	LOG_NOTI("Using serial device '%s'", dev);
-
 	/* set necessary serial port attributes */
 	struct termios tty;
 	memset(&tty, 0, sizeof tty);

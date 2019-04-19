@@ -28,7 +28,7 @@ static void usage(void)
 			"Nordic NRF DFU Upgrade with DFUPKG.zip\n"
 			"Options:\n"
 			"  -h, --help\t\tShow help\n"
-			"  -d, --debug=<level>\tDebug level\n"
+			"  -d, --debug=<level>\tDebug level (1 or 2)\n"
 			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
 			"  -c, --cmd <text>\tCommand to enter DFU mode\n");
 }
@@ -37,6 +37,7 @@ static void main_options(int argc, char* argv[])
 {
 	/* defaults */
 	conf.serport = "/dev/ttyUSB0";
+	conf.debug = LL_NOTICE;
 
 	int n = 0;
 	while (n >= 0) {
@@ -49,9 +50,9 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'd':
 			if (optarg == NULL)
-				conf.debug = 1;
-			else
-				conf.debug = atoi(optarg);
+				conf.debug = LL_INFO;
+			else if (atoi(optarg) == 2)
+				conf.debug = LL_DEBUG;
 			break;
 		case 'p':
 			conf.serport = optarg;
@@ -168,8 +169,8 @@ int main(int argc, char *argv[])
 
 	main_options(argc, argv);
 
-	LOG_DBGL(1, "Port: %s", conf.serport);
-	LOG_DBGL(1, "ZIP: %s", conf.zipfile);
+	LOG_INF("Serial Port: %s", conf.serport);
+	LOG_INF("DFU Package: %s", conf.zipfile);
 
 	zip_t* zip = zip_open(conf.zipfile, ZIP_RDONLY, NULL);
 	if (zip == NULL) {
@@ -195,7 +196,12 @@ int main(int argc, char *argv[])
 	}
 
 	/* first check if Bootloader responds to Ping */
+	LOG_NOTI_("Waiting for device to be ready: ");
 	do {
+		if (conf.debug < LL_INFO) {
+			printf("."); fflush(stdout);
+		}
+
 		ret = dfu_ping();
 		if (!ret) {
 			if (conf.dfucmd) {
@@ -206,6 +212,9 @@ int main(int argc, char *argv[])
 		}
 	} while (!ret);
 
+	LOG_NL(LL_NOTICE);
+	LOG_NOTI("Starting DFU upgrade");
+
 	/* Upgrade process */
 	if (!dfu_set_packet_receive_notification(0))
 		goto exit;
@@ -213,11 +222,16 @@ int main(int argc, char *argv[])
 	if (!dfu_get_serial_mtu())
 		goto exit;
 
+	LOG_NOTI_("Sending Init: ");
 	if (!dfu_object_write_procedure(1, zf1, zs1))
 		goto exit;
+	LOG_NL(LL_NOTICE);
 
+	LOG_NOTI_("Sending Firmware: ");
 	if (!dfu_object_write_procedure(2, zf2, zs2))
 		goto exit;
+	LOG_NL(LL_NOTICE);
+	LOG_NOTI("Done");
 
 	ret = EXIT_SUCCESS;
 

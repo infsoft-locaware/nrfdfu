@@ -54,7 +54,7 @@ bool ser_encode_write(uint8_t* req, size_t len)
 		pos += ret;
 	} while (pos < slip_len);
 
-	if (conf.debug > 2) {
+	if (conf.debug >= LL_DEBUG) {
 		printf("[ TX: ");
 		for (int i=0; i < len; i++) {
 			printf("%d ", *(req+i));
@@ -108,7 +108,7 @@ const uint8_t* ser_read_decode(void)
 		}
 	} while (end != 1 || read_tries > MAX_READ_TRIES);
 
-	if (conf.debug > 2) {
+	if (conf.debug >= LL_DEBUG) {
 		printf("[ RX: ");
 		for (int i=0; i < slip.current_index; i++) {
 			printf("%d ", slip.p_buffer[i]);

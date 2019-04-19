@@ -7,6 +7,7 @@
 #include "nrf_dfu_req_handler.h"
 #include "log.h"
 #include "util.h"
+#include "conf.h"
 
 static uint16_t dfu_mtu;
 static uint32_t dfu_max_size;
@@ -290,6 +291,11 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 
 	// No response expected
 	LOG_INF("%zd bytes CRC: 0x%X", written, dfu_current_crc);
+
+	if (conf.debug < LL_INFO) {
+		printf("."); fflush(stdout);
+	}
+
 	return true;
 }
 
