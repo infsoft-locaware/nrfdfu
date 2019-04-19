@@ -346,14 +346,14 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 	uint32_t offset;
 	uint32_t crc;
 
-	dfu_object_select(type, &offset, &crc);
+	if (!dfu_object_select(type, &offset, &crc))
+		return false;
 
 	/* object with same length and CRC already received */
 	if (offset == sz && zip_crc_move(zf, sz) == crc) {
 		LOG_INF("Object already received");
 		/* Don't transfer anything and skip to the Execute command */
-		dfu_object_execute();
-		return true;
+		return dfu_object_execute();
 	}
 
 	/* parts already received */
@@ -375,9 +375,11 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 			/* transfer remaining data if necessary */
 			if (remain > 0) {
 				size_t end = offset + dfu_max_size - remain;
-				dfu_object_write(zf, end);
+				if (!dfu_object_write(zf, end))
+					return false;
 			}
-			dfu_object_execute();
+			if (!dfu_object_execute())
+				return false;
 		}
 	}
 	else if (offset == 0) {
@@ -386,14 +388,21 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 
 	/* create and write objects of max_size */
 	for (int i = offset; i < sz; i += dfu_max_size) {
-		dfu_object_create(type, MIN(sz-i, dfu_max_size));
-		dfu_object_write(zf, sz);
+		if (!dfu_object_create(type, MIN(sz-i, dfu_max_size)))
+			return false;
+
+		if (!dfu_object_write(zf, sz))
+			return false;
+
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != dfu_current_crc) {
 			LOG_ERR("CRC failed 0x%X vs 0x%X", rcrc, dfu_current_crc);
 			return false;
 		}
-		dfu_object_execute();
+
+		if (!dfu_object_execute())
+			return false;
 	}
+
 	return true;
 }
