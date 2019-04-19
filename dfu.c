@@ -357,7 +357,7 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 
 	/* object with same length and CRC already received */
 	if (offset == sz && zip_crc_move(zf, sz) == crc) {
-		LOG_INF("Object already received");
+		LOG_NOTI_("Object already received");
 		/* Don't transfer anything and skip to the Execute command */
 		return dfu_object_execute();
 	}
@@ -365,15 +365,15 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 	/* parts already received */
 	if (offset > 0) {
 		uint32_t remain = offset % dfu_max_size;
-		LOG_INF("Object partially received offset %u remaining %u",
+		LOG_WARN("Object partially received (offset %u remaining %u)",
 			offset, remain);
 
 		dfu_current_crc = zip_crc_move(zf, offset);
 		if (crc != dfu_current_crc) {
 			/* invalid crc, remove corrupted data, rewind and
 			 * create new object below */
-			LOG_INF("CRC does not match");
 			offset -= remain > 0 ? remain : dfu_max_size;
+			LOG_WARN("CRC does not match (restarting from %u)", offset);
 			zip_fseek(zf, 0, 0);
 			dfu_current_crc = zip_crc_move(zf, offset);
 		}
