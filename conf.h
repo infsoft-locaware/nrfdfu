@@ -10,6 +10,7 @@ struct config {
 	int		debug;
 	char*		serport;
 	char*		zipfile;
+	char*		dfucmd;
 };
 
 extern struct config conf;

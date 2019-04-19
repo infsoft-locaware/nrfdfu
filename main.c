@@ -20,16 +20,19 @@ static struct option options[] = {
 	{ "help",	no_argument,		NULL, 'h' },
 	{ "debug",      optional_argument,	NULL, 'd' },
 	{ "port",       required_argument,	NULL, 'p' },
+	{ "cmd",        required_argument,	NULL, 'c' },
 	{ NULL, 0, NULL, 0 }
 };
 
 static void usage(void)
 {
-	fprintf(stderr, "nrfserdfu [options]\n"
-			"options:\n"
-			"[-h --help]\n"
-			"[-d --debug]\n"
-			"[-p --port]\n");
+	fprintf(stderr, "Usage: nrfserdfu [options] DFUPKG.zip\n"
+			"Nordic NRF DFU Upgrade with DFUPKG.zip\n"
+			"Options:\n"
+			"  -h, --help\t\tShow help\n"
+			"  -d, --debug=<level>\tDebug level\n"
+			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
+			"  -c, --cmd <text>\tCommand to enter DFU mode\n");
 }
 
 static void main_options(int argc, char* argv[])
@@ -39,7 +42,7 @@ static void main_options(int argc, char* argv[])
 
 	int n = 0;
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "hd::p:", options, NULL);
+		n = getopt_long(argc, argv, "hd::p:c:", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -54,6 +57,9 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'p':
 			conf.serport = optarg;
+			break;
+		case 'c':
+			conf.dfucmd = optarg;
 			break;
 		}
 	}
@@ -136,6 +142,23 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 	return 0;
 }
 
+static void enter_dfu_cmd(void)
+{
+	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
+	write(ser_fd, conf.dfucmd, strlen(conf.dfucmd));
+	write(ser_fd, "\r\n", 2);
+	sleep(1);
+	char b[200];
+	int ret = read(ser_fd, b, 200);
+	if (ret > 0) {
+		/* debug output reply */
+		b[ret--] = '\0';
+		while (b[ret] == '\r' || b[ret] == '\n')
+			b[ret--] = '\0';
+		LOG_DBG("Device replied: '%s'", b);
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int ret = EXIT_FAILURE;
@@ -176,8 +199,13 @@ int main(int argc, char *argv[])
 	/* first check if Bootloader responds to Ping */
 	do {
 		ret = dfu_ping();
-		if (!ret)
-			sleep(1);
+		if (!ret) {
+			if (conf.dfucmd) {
+				enter_dfu_cmd();
+			} else {
+				sleep(1);
+			}
+		}
 	} while (!ret);
 
 	/* Upgrade process */
