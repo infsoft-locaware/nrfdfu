@@ -10,7 +10,7 @@
 
 static uint16_t dfu_mtu;
 static uint32_t dfu_max_size;
-static uLong dfu_current_crc;
+static uint32_t dfu_current_crc;
 
 static size_t request_size(nrf_dfu_request_t* req)
 {
@@ -289,7 +289,7 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 	} while (len > 0 && written < size && written < dfu_max_size);
 
 	// No response expected
-	LOG_INF("%zd bytes CRC: 0x%lX", written, dfu_current_crc);
+	LOG_INF("%zd bytes CRC: 0x%X", written, dfu_current_crc);
 	return true;
 }
 
@@ -390,9 +390,10 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 		dfu_object_write(zf, sz);
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != dfu_current_crc) {
-			LOG_ERR("CRC failed 0x%X vs 0x%lX", rcrc, dfu_current_crc);
+			LOG_ERR("CRC failed 0x%X vs 0x%X", rcrc, dfu_current_crc);
 			return false;
 		}
 		dfu_object_execute();
 	}
+	return true;
 }
