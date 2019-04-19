@@ -316,13 +316,13 @@ bool dfu_object_execute(void)
 }
 
 /* get CRC of contents of ZIP file until size */
-static uLong zip_crc_move(zip_file_t* zf, size_t size)
+static uint32_t zip_crc_move(zip_file_t* zf, size_t size)
 {
 	uint8_t fbuf[200];
 	size_t read = 0;
 	size_t to_read;
 	zip_int64_t len;
-	uLong crc = crc32(0L, Z_NULL, 0);
+	uint32_t crc = crc32(0L, Z_NULL, 0);
 
 	do {
 		to_read = MIN(sizeof(fbuf), size - read);
