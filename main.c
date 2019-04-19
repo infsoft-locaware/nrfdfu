@@ -181,10 +181,18 @@ int main(int argc, char *argv[])
 	} while (!ret);
 
 	/* Upgrade process */
-	dfu_set_packet_receive_notification(0);
-	dfu_get_serial_mtu();
-	dfu_object_write_procedure(1, zf1, zs1);
-	dfu_object_write_procedure(2, zf2, zs2);
+	if (!dfu_set_packet_receive_notification(0))
+		goto exit;
+
+	if (!dfu_get_serial_mtu())
+		goto exit;
+
+	if (!dfu_object_write_procedure(1, zf1, zs1))
+		goto exit;
+
+	if (!dfu_object_write_procedure(2, zf2, zs2))
+		goto exit;
+
 	ret = EXIT_SUCCESS;
 
 exit:
