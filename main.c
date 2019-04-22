@@ -47,7 +47,7 @@ static void main_options(int argc, char* argv[])
 		switch (n) {
 		case 'h':
 			usage();
-			break;
+			exit(EXIT_SUCCESS);
 		case 'v':
 			if (optarg == NULL)
 				conf.loglevel = LL_INFO;
