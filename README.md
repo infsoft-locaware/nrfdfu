@@ -1,4 +1,14 @@
-== Compile on Ubuntu ==
+# nrfdfu - Nordic Serial DFU #
+
+This is a C Implementation of Nordics Serial DFU protocol, targeted for embedded systems where running Python-based `nrfutil` is too heavy-weight.
+
+## Dependecies ##
+
+  * JSON-C: https://github.com/json-c/json-c
+  * ZLib
+  * LibZIP: https://libzip.org/
+  
+## Compile on Ubuntu ##
 
 1.) Install dependencies:
 
@@ -14,7 +24,7 @@
     make
 
 
-== Run ==
+## Usage ##
 
 Example:
 
