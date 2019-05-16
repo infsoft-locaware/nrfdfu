@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <stdint.h>
+#include <sys/select.h>
+#include <errno.h>
 
 #include "serialtty.h"
 #include "log.h"
@@ -75,4 +77,56 @@ void serial_fini(int sock)
 		LOG_ERR("Couldn't reset termio attrs");
 
 	close(sock);
+}
+
+bool serial_wait_read_ready(int fd, int sec)
+{
+	struct timeval tv = {};
+	fd_set fds = {};
+	tv.tv_sec = sec;
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+	int ret = select(fd+1, &fds, NULL, NULL, &tv);
+	return ret <= 0; // error or timeout
+}
+
+bool serial_wait_write_ready(int fd, int sec)
+{
+	struct timeval tv = {};
+	fd_set fds = {};
+	tv.tv_sec = sec;
+	FD_ZERO(&fds);
+	FD_SET(fd, &fds);
+	int ret = select(fd+1, NULL, &fds, NULL, &tv);
+	return ret <= 0; // error or timeout
+}
+
+/* write to serial handling blocking case */
+bool serial_write(int fd, const char* buf, size_t len, int timeout_sec)
+{
+	ssize_t ret;
+	size_t pos = 0;
+
+	do {
+		ret = write(fd, buf + pos, len - pos);
+		if (ret == -1) {
+			if (errno == EAGAIN) {
+				/* write would block, wait until ready again */
+				serial_wait_write_ready(fd, timeout_sec);
+				continue;
+			} else {
+				/* grave error */
+				LOG_ERR("ERR: write error: %d %s", errno, strerror(errno));
+				return false;
+			}
+		}
+		else if ((size_t)ret < len - pos) {
+			/* partial writes usually mean next write would return
+			 * EAGAIN, so just wait until it's ready again */
+			serial_wait_write_ready(fd, timeout_sec);
+		}
+		pos += ret;
+	} while (pos < len);
+
+	return true;
 }

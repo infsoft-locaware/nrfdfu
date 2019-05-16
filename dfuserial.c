@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "dfuserial.h"
+#include "serialtty.h"
 #include "slip.h"
 #include "log.h"
 #include "conf.h"
@@ -16,43 +17,14 @@ static uint8_t buf[SLIP_BUF_SIZE];
 
 extern int ser_fd;
 
-static bool wait_serial_write_ready(int sec)
-{
-	struct timeval tv = {};
-	fd_set fds = {};
-	tv.tv_sec = sec;
-	FD_ZERO(&fds);
-	FD_SET(ser_fd, &fds);
-	int ret = select(ser_fd+1, NULL, &fds, NULL, &tv);
-	return ret <= 0; // error or timeout
-}
-
 bool ser_encode_write(uint8_t* req, size_t len)
 {
 	uint32_t slip_len;
 	ssize_t ret;
 	size_t pos = 0;
 	slip_encode(buf, (uint8_t*)req, len, &slip_len);
-	do {
-		ret = write(ser_fd, buf + pos, slip_len - pos);
-		if (ret == -1) {
-			if (errno == EAGAIN) {
-				/* write would block, wait until ready again */
-				wait_serial_write_ready(SERIAL_TIMEOUT_SEC);
-				continue;
-			} else {
-				/* grave error */
-				LOG_ERR("ERR: write error: %d %s", errno, strerror(errno));
-				return false;
-			}
-		}
-		else if (ret < slip_len - pos) {
-			/* partial writes usually mean next write would return
-			 * EAGAIN, so just wait until it's ready again */
-			wait_serial_write_ready(1);
-		}
-		pos += ret;
-	} while (pos < slip_len);
+
+	serial_write(ser_fd, buf, slip_len, SERIAL_TIMEOUT_SEC);
 
 	if (conf.loglevel >= LL_DEBUG) {
 		printf("[ TX: ");
@@ -63,17 +35,6 @@ bool ser_encode_write(uint8_t* req, size_t len)
 	}
 
 	return true;
-}
-
-static bool wait_serial_read_ready(int sec)
-{
-	struct timeval tv = {};
-	fd_set fds = {};
-	tv.tv_sec = sec;
-	FD_ZERO(&fds);
-	FD_SET(ser_fd, &fds);
-	int ret = select(ser_fd+1, &fds, NULL, NULL, &tv);
-	return ret <= 0; // error or timeout
 }
 
 const uint8_t* ser_read_decode(void)
@@ -93,7 +54,7 @@ const uint8_t* ser_read_decode(void)
 
 	do {
 		read_tries++;
-		timeout = wait_serial_read_ready(SERIAL_TIMEOUT_SEC);
+		timeout = serial_wait_read_ready(ser_fd, SERIAL_TIMEOUT_SEC);
 		if (timeout) {
 			LOG_INF("Timeout on Serial RX");
 			break;
