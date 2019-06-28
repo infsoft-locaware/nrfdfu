@@ -30,6 +30,7 @@ struct config {
 	char*		serport;
 	char*		zipfile;
 	char*		dfucmd;
+	int		timeout;
 };
 
 extern struct config conf;

@@ -38,6 +38,7 @@ static struct option options[] = {
 	{ "verbose",    optional_argument,	NULL, 'v' },
 	{ "port",       required_argument,	NULL, 'p' },
 	{ "cmd",        required_argument,	NULL, 'c' },
+	{ "timeout",    required_argument,	NULL, 't' },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -49,7 +50,8 @@ static void usage(void)
 			"  -h, --help\t\tShow help\n"
 			"  -v, --verbose=<level>\tLog level 1 or 2 (-vv)\n"
 			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
-			"  -c, --cmd <text>\tCommand to enter DFU mode\n");
+			"  -c, --cmd <text>\tCommand to enter DFU mode\n"
+			"  -t, --timeout <num>\tTimeout after <num> tries (60)\n");
 }
 
 static void main_options(int argc, char* argv[])
@@ -57,10 +59,11 @@ static void main_options(int argc, char* argv[])
 	/* defaults */
 	conf.serport = "/dev/ttyUSB0";
 	conf.loglevel = LL_NOTICE;
+	conf.timeout = 60;
 
 	int n = 0;
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "hv::p:c:", options, NULL);
+		n = getopt_long(argc, argv, "hv::p:c:t:", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -78,6 +81,9 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'c':
 			conf.dfucmd = optarg;
+			break;
+		case 't':
+			conf.timeout = atoi(optarg);
 			break;
 		}
 	}
@@ -216,6 +222,7 @@ int main(int argc, char *argv[])
 
 	/* first check if Bootloader responds to Ping */
 	LOG_NOTI_("Waiting for device to be ready: ");
+	int try = 0;
 	do {
 		if (conf.loglevel < LL_INFO) {
 			printf("."); fflush(stdout);
@@ -229,9 +236,16 @@ int main(int argc, char *argv[])
 				sleep(1);
 			}
 		}
-	} while (!ret);
+	} while (!ret && ++try < conf.timeout);
 
 	LOG_NL(LL_NOTICE);
+
+	if (try >= conf.timeout) {
+		LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
+		ret = EXIT_FAILURE;
+		goto exit;
+	}
+
 	LOG_NOTI("Starting DFU upgrade");
 
 	/* Upgrade process */

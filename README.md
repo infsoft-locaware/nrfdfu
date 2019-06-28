@@ -41,6 +41,7 @@ Options:
   -v, --verbose=<level> Log level 1 or 2 (-vv)
   -p, --port <tty>      Serial port (/dev/ttyUSB0)
   -c, --cmd <text>      Command to enter DFU mode
+  -t, --timeout <num>   Timeout after <num> tries (60)
  ```
  
 Example:
