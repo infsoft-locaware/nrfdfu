@@ -24,6 +24,7 @@
 #include "dfu.h"
 #include "dfuserial.h"
 #include "nrf_dfu_req_handler.h"
+#include "nrf_dfu_handling_error.h"
 #include "log.h"
 #include "util.h"
 #include "conf.h"
@@ -105,6 +106,62 @@ static const char* dfu_err_str(nrf_dfu_result_t res)
 	return "Unknown error";
 }
 
+static const char* dfu_ext_err_str(nrf_dfu_ext_error_code_t res)
+{
+	switch (res) {
+		case NRF_DFU_EXT_ERROR_NO_ERROR:
+			return "No extended error code has been set.";
+		case NRF_DFU_EXT_ERROR_INVALID_ERROR_CODE:
+			return "Invalid error code.";
+		case NRF_DFU_EXT_ERROR_WRONG_COMMAND_FORMAT:
+			return "The format of the command was incorrect.";
+		case NRF_DFU_EXT_ERROR_UNKNOWN_COMMAND:
+			return "The command was successfully parsed, but it is "
+				"not supported or unknown";
+		case NRF_DFU_EXT_ERROR_INIT_COMMAND_INVALID:
+			return "The init command is invalid. The init packet "
+				"either has an invalid update type or it is "
+				"missing required fields for the update type "
+				"for example, the init packet for a SoftDevice "
+				"update is missing the SoftDevice size field.";
+		case NRF_DFU_EXT_ERROR_FW_VERSION_FAILURE:
+			return "The firmware version is too low. For an "
+				"application or SoftDevice, the version must be "
+				"greater than or equal to the current version. "
+				"For a bootloader, it must be greater than the "
+				"current version. This requirement prevents "
+				" downgrade attacks.";
+		case NRF_DFU_EXT_ERROR_HW_VERSION_FAILURE:
+			return "The hardware version of the device does not "
+				"match the required hardware version for the "
+				"update.";
+		case NRF_DFU_EXT_ERROR_SD_VERSION_FAILURE:
+			return "The array of supported SoftDevices for the "
+				"update does not contain the FWID of the "
+				"current SoftDevice or the first FWID is '0' on "
+				"a bootloader which requires the SoftDevice to "
+				"be present.";
+		case NRF_DFU_EXT_ERROR_SIGNATURE_MISSING:
+			return "The init packet does not contain a signature.";
+		case NRF_DFU_EXT_ERROR_WRONG_HASH_TYPE:
+			return "The hash type that is specified by the init "
+				"packet is not supported by the DFU bootloader.";
+		case NRF_DFU_EXT_ERROR_HASH_FAILED:
+			return "The hash of the firmware image cannot be "
+				"calculated.";
+		case NRF_DFU_EXT_ERROR_WRONG_SIGNATURE_TYPE:
+			return "The type of the signature is unknown or not "
+				"supported by the DFU bootloader.";
+		case NRF_DFU_EXT_ERROR_VERIFICATION_FAILED:
+			return "The hash of the received firmware image does "
+				"not match the hash in the init packet.";
+		case NRF_DFU_EXT_ERROR_INSUFFICIENT_SPACE:
+			return "The available space on the device is "
+				"insufficient to hold the firmware.";
+	}
+	return "Unknown extended error";
+}
+
 static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
 	const uint8_t* buf = ser_read_decode();
@@ -122,6 +179,9 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 
 	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
 		LOG_ERR("Response Error %s", dfu_err_str(resp->result));
+		if (resp->result == NRF_DFU_RES_CODE_EXT_ERROR) {
+			LOG_ERR("ERR: '%s'", dfu_ext_err_str(resp->ext_err));
+		}
 		return NULL;
 	}
 

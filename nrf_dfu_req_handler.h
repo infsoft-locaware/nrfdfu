@@ -217,6 +217,7 @@ typedef struct
         nrf_dfu_response_crc_t      crc;           //!< CRC response.
         nrf_dfu_response_ping_t     ping;          //!< Ping response.
         nrf_dfu_response_mtu_t      mtu;           //!< MTU response.
+        uint8_t			    ext_err;
     };
 } __attribute__ ((packed)) nrf_dfu_response_t ;
 
