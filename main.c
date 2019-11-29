@@ -166,20 +166,42 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 	return 0;
 }
 
-static void enter_dfu_cmd(void)
+static bool enter_dfu_cmd(void)
 {
-	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
-	write(ser_fd, conf.dfucmd, strlen(conf.dfucmd));
-	write(ser_fd, "\r\n", 2);
-	sleep(1);
 	char b[200];
+
+	/* first read and discard anything that came before */
+	read(ser_fd, b, 200);
+
+	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
+	/* it looks like the first two characters written are lost...
+	 * and we need \r to enter CLI */
+	serial_write(ser_fd, "\r\r\r", 3, 1);
+	serial_write(ser_fd, conf.dfucmd, strlen(conf.dfucmd), 1);
+	serial_write(ser_fd, "\r", 1, 1);
+	sleep(1);
+
 	int ret = read(ser_fd, b, 200);
 	if (ret > 0) {
 		/* debug output reply */
 		b[ret--] = '\0';
-		while (b[ret] == '\r' || b[ret] == '\n')
+		/* remove trailing \r \n */
+		while (b[ret] == '\r' || b[ret] == '\n') {
 			b[ret--] = '\0';
-		LOG_DBG("Device replied: '%s'", b);
+		}
+		/* remove \r \n and zero from the beginning */
+		ret = 0;
+		while (b[ret] == '\r' || b[ret] == '\n' || b[ret] == '\0'
+		       && ret < sizeof(b)) {
+			ret++;
+		}
+		LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
+		for (int i=0; i < ret; i++)
+			printf("%x ", b[i]);
+		return true;
+	} else {
+		LOG_INF("Device didn't repy (%d)", ret);
+		return false;
 	}
 }
 
@@ -224,18 +246,25 @@ int main(int argc, char *argv[])
 	LOG_NOTI_("Waiting for device to be ready: ");
 	int try = 0;
 	do {
+		if (conf.dfucmd) {
+			ret = enter_dfu_cmd();
+			sleep(1);
+			if (!ret) {
+				/* if dfu command failed, try ping, it will
+				 * usually fail with "Opcode not supported"
+				 * because of the text we sent before, but then
+				 * the next one below can succeed */
+				ret = dfu_ping();
+			}
+		} else {
+			sleep(1);
+		}
+
 		if (conf.loglevel < LL_INFO) {
 			printf("."); fflush(stdout);
 		}
 
 		ret = dfu_ping();
-		if (!ret) {
-			if (conf.dfucmd) {
-				enter_dfu_cmd();
-			} else {
-				sleep(1);
-			}
-		}
 	} while (!ret && ++try < conf.timeout);
 
 	LOG_NL(LL_NOTICE);
