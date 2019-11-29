@@ -196,8 +196,6 @@ static bool enter_dfu_cmd(void)
 			ret++;
 		}
 		LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
-		for (int i=0; i < ret; i++)
-			printf("%x ", b[i]);
 		return true;
 	} else {
 		LOG_INF("Device didn't repy (%d)", ret);
