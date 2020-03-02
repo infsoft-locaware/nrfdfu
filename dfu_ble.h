@@ -20,12 +20,12 @@
 #ifndef DFU_BLE_H
 #define DFU_BLE_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 
-bool ble_enter_dfu(const char* address);
-bool ble_write(uint8_t* req, size_t len);
-const uint8_t* ble_read(void);
+bool ble_enter_dfu(const char *address);
+bool ble_write(uint8_t *req, size_t len);
+const uint8_t *ble_read(void);
 
 #endif

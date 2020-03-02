@@ -17,24 +17,24 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
-#include "log.h"
 #include "conf.h"
+#include "log.h"
 
-void __attribute__ ((format (printf, 3, 4)))
+void __attribute__((format(printf, 3, 4)))
 log_out(enum loglevel level, bool nl, const char *format, ...)
 {
-	va_list args;
+    va_list args;
 
-	if (conf.loglevel < level)
-		return;
+    if (conf.loglevel < level)
+        return;
 
-	va_start(args, format);
-	vprintf(format, args);
-	if (nl || conf.loglevel > level)
-		printf("\n");
+    va_start(args, format);
+    vprintf(format, args);
+    if (nl || conf.loglevel > level)
+        printf("\n");
 
-	va_end(args);
+    va_end(args);
 }

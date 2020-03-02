@@ -23,18 +23,19 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#define CONF_MAX_LEN	200
+#define CONF_MAX_LEN 200
 
-enum DFU_TYPE { DFU_SERIAL, DFU_BLE };
+enum DFU_TYPE { DFU_SERIAL,
+                DFU_BLE };
 
 struct config {
-	int		loglevel;
-	char*		serport;
-	char*		zipfile;
-	char*		dfucmd;
-	int		timeout;
-    enum DFU_TYPE   dfu_type;
-    char*           ble_addr;
+    int loglevel;
+    char *serport;
+    char *zipfile;
+    char *dfucmd;
+    int timeout;
+    enum DFU_TYPE dfu_type;
+    char *ble_addr;
 };
 
 extern struct config conf;

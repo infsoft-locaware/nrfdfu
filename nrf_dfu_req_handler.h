@@ -47,76 +47,71 @@
 #ifndef NRF_DFU_REQ_HANDLER_H__
 #define NRF_DFU_REQ_HANDLER_H__
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /**
  * @brief DFU object types.
  */
-typedef enum
-{
-    NRF_DFU_OBJ_TYPE_INVALID,                   //!< Invalid object type.
-    NRF_DFU_OBJ_TYPE_COMMAND,                   //!< Command object.
-    NRF_DFU_OBJ_TYPE_DATA,                      //!< Data object.
-} __attribute__ ((packed)) nrf_dfu_obj_type_t;
+typedef enum {
+    NRF_DFU_OBJ_TYPE_INVALID, //!< Invalid object type.
+    NRF_DFU_OBJ_TYPE_COMMAND, //!< Command object.
+    NRF_DFU_OBJ_TYPE_DATA,    //!< Data object.
+} __attribute__((packed)) nrf_dfu_obj_type_t;
 
 /**
  * @brief DFU protocol operation.
  */
-typedef enum
-{
-    NRF_DFU_OP_PROTOCOL_VERSION     = 0x00,     //!< Retrieve protocol version.
-    NRF_DFU_OP_OBJECT_CREATE        = 0x01,     //!< Create selected object.
-    NRF_DFU_OP_RECEIPT_NOTIF_SET    = 0x02,     //!< Set receipt notification.
-    NRF_DFU_OP_CRC_GET              = 0x03,     //!< Request CRC of selected object.
-    NRF_DFU_OP_OBJECT_EXECUTE       = 0x04,     //!< Execute selected object.
-    NRF_DFU_OP_OBJECT_SELECT        = 0x06,     //!< Select object.
-    NRF_DFU_OP_MTU_GET              = 0x07,     //!< Retrieve MTU size.
-    NRF_DFU_OP_OBJECT_WRITE         = 0x08,     //!< Write selected object.
-    NRF_DFU_OP_PING                 = 0x09,     //!< Ping.
-    NRF_DFU_OP_HARDWARE_VERSION     = 0x0A,     //!< Retrieve hardware version.
-    NRF_DFU_OP_FIRMWARE_VERSION     = 0x0B,     //!< Retrieve firmware version.
-    NRF_DFU_OP_ABORT                = 0x0C,     //!< Abort the DFU procedure.
-    NRF_DFU_OP_RESPONSE             = 0x60,     //!< Response.
-    NRF_DFU_OP_INVALID              = 0xFF,
-} __attribute__ ((packed)) nrf_dfu_op_t;
+typedef enum {
+    NRF_DFU_OP_PROTOCOL_VERSION = 0x00,  //!< Retrieve protocol version.
+    NRF_DFU_OP_OBJECT_CREATE = 0x01,     //!< Create selected object.
+    NRF_DFU_OP_RECEIPT_NOTIF_SET = 0x02, //!< Set receipt notification.
+    NRF_DFU_OP_CRC_GET = 0x03,           //!< Request CRC of selected object.
+    NRF_DFU_OP_OBJECT_EXECUTE = 0x04,    //!< Execute selected object.
+    NRF_DFU_OP_OBJECT_SELECT = 0x06,     //!< Select object.
+    NRF_DFU_OP_MTU_GET = 0x07,           //!< Retrieve MTU size.
+    NRF_DFU_OP_OBJECT_WRITE = 0x08,      //!< Write selected object.
+    NRF_DFU_OP_PING = 0x09,              //!< Ping.
+    NRF_DFU_OP_HARDWARE_VERSION = 0x0A,  //!< Retrieve hardware version.
+    NRF_DFU_OP_FIRMWARE_VERSION = 0x0B,  //!< Retrieve firmware version.
+    NRF_DFU_OP_ABORT = 0x0C,             //!< Abort the DFU procedure.
+    NRF_DFU_OP_RESPONSE = 0x60,          //!< Response.
+    NRF_DFU_OP_INVALID = 0xFF,
+} __attribute__((packed)) nrf_dfu_op_t;
 
 /**
  * @brief DFU operation result code.
  */
-typedef enum
-{
-    NRF_DFU_RES_CODE_INVALID                 = 0x00,    //!< Invalid opcode.
-    NRF_DFU_RES_CODE_SUCCESS                 = 0x01,    //!< Operation successful.
-    NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED   = 0x02,    //!< Opcode not supported.
-    NRF_DFU_RES_CODE_INVALID_PARAMETER       = 0x03,    //!< Missing or invalid parameter value.
-    NRF_DFU_RES_CODE_INSUFFICIENT_RESOURCES  = 0x04,    //!< Not enough memory for the data object.
-    NRF_DFU_RES_CODE_INVALID_OBJECT          = 0x05,    //!< Data object does not match the firmware and hardware requirements, the signature is wrong, or parsing the command failed.
-    NRF_DFU_RES_CODE_UNSUPPORTED_TYPE        = 0x07,    //!< Not a valid object type for a Create request.
-    NRF_DFU_RES_CODE_OPERATION_NOT_PERMITTED = 0x08,    //!< The state of the DFU process does not allow this operation.
-    NRF_DFU_RES_CODE_OPERATION_FAILED        = 0x0A,    //!< Operation failed.
-    NRF_DFU_RES_CODE_EXT_ERROR               = 0x0B,    //!< Extended error. The next byte of the response contains the error code of the extended error (see @ref nrf_dfu_ext_error_code_t.
-} __attribute__ ((packed)) nrf_dfu_result_t;
+typedef enum {
+    NRF_DFU_RES_CODE_INVALID = 0x00,                 //!< Invalid opcode.
+    NRF_DFU_RES_CODE_SUCCESS = 0x01,                 //!< Operation successful.
+    NRF_DFU_RES_CODE_OP_CODE_NOT_SUPPORTED = 0x02,   //!< Opcode not supported.
+    NRF_DFU_RES_CODE_INVALID_PARAMETER = 0x03,       //!< Missing or invalid parameter value.
+    NRF_DFU_RES_CODE_INSUFFICIENT_RESOURCES = 0x04,  //!< Not enough memory for the data object.
+    NRF_DFU_RES_CODE_INVALID_OBJECT = 0x05,          //!< Data object does not match the firmware and hardware requirements, the signature is wrong, or parsing the command failed.
+    NRF_DFU_RES_CODE_UNSUPPORTED_TYPE = 0x07,        //!< Not a valid object type for a Create request.
+    NRF_DFU_RES_CODE_OPERATION_NOT_PERMITTED = 0x08, //!< The state of the DFU process does not allow this operation.
+    NRF_DFU_RES_CODE_OPERATION_FAILED = 0x0A,        //!< Operation failed.
+    NRF_DFU_RES_CODE_EXT_ERROR = 0x0B,               //!< Extended error. The next byte of the response contains the error code of the extended error (see @ref nrf_dfu_ext_error_code_t.
+} __attribute__((packed)) nrf_dfu_result_t;
 
-typedef enum
-{
-    NRF_DFU_FIRMWARE_TYPE_SOFTDEVICE    = 0x00,
-    NRF_DFU_FIRMWARE_TYPE_APPLICATION   = 0x01,
-    NRF_DFU_FIRMWARE_TYPE_BOOTLOADER    = 0x02,
-    NRF_DFU_FIRMWARE_TYPE_UNKNOWN       = 0xFF,
-} __attribute__ ((packed)) nrf_dfu_firmware_type_t;
+typedef enum {
+    NRF_DFU_FIRMWARE_TYPE_SOFTDEVICE = 0x00,
+    NRF_DFU_FIRMWARE_TYPE_APPLICATION = 0x01,
+    NRF_DFU_FIRMWARE_TYPE_BOOTLOADER = 0x02,
+    NRF_DFU_FIRMWARE_TYPE_UNKNOWN = 0xFF,
+} __attribute__((packed)) nrf_dfu_firmware_type_t;
 
 /**
  * @brief @ref NRF_DFU_OP_PROTOCOL_VERSION response details.
  */
 typedef struct
 {
-    uint8_t version;                    //!< Protocol version.
+    uint8_t version; //!< Protocol version.
 } nrf_dfu_response_protocol_t;
 
 /**
@@ -124,13 +119,13 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t part;                      //!< Hardware part, from FICR register.
-    uint32_t variant;                   //!< Hardware variant, from FICR register.
+    uint32_t part;    //!< Hardware part, from FICR register.
+    uint32_t variant; //!< Hardware variant, from FICR register.
     struct
     {
-        uint32_t rom_size;              //!< ROM size, in bytes.
-        uint32_t ram_size;              //!< RAM size, in bytes.
-        uint32_t rom_page_size;         //!< ROM flash page size, in bytes.
+        uint32_t rom_size;      //!< ROM size, in bytes.
+        uint32_t ram_size;      //!< RAM size, in bytes.
+        uint32_t rom_page_size; //!< ROM flash page size, in bytes.
     } memory;
 } nrf_dfu_response_hardware_t;
 
@@ -139,10 +134,10 @@ typedef struct
  */
 typedef struct
 {
-    nrf_dfu_firmware_type_t type;       //!< Firmware type.
-    uint32_t                version;    //!< Firmware version.
-    uint32_t                addr;       //!< Firmware address in flash.
-    uint32_t                len;        //!< Firmware length in bytes.
+    nrf_dfu_firmware_type_t type; //!< Firmware type.
+    uint32_t version;             //!< Firmware version.
+    uint32_t addr;                //!< Firmware address in flash.
+    uint32_t len;                 //!< Firmware length in bytes.
 } nrf_dfu_response_firmware_t;
 
 /**
@@ -150,9 +145,9 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t max_size;                  //!< Maximum size of selected object.
-    uint32_t offset;                    //!< Current offset.
-    uint32_t crc;                       //!< Current CRC.
+    uint32_t max_size; //!< Maximum size of selected object.
+    uint32_t offset;   //!< Current offset.
+    uint32_t crc;      //!< Current CRC.
 } nrf_dfu_response_select_t;
 
 /**
@@ -170,8 +165,8 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t offset;                    //!< Used only when packet receipt notification is used.
-    uint32_t crc;                       //!< Used only when packet receipt notification is used.
+    uint32_t offset; //!< Used only when packet receipt notification is used.
+    uint32_t crc;    //!< Used only when packet receipt notification is used.
 } nrf_dfu_response_write_t;
 
 /**
@@ -179,8 +174,8 @@ typedef struct
  */
 typedef struct
 {
-    uint32_t offset;                    //!< Current offset.
-    uint32_t crc;                       //!< Current CRC.
+    uint32_t offset; //!< Current offset.
+    uint32_t crc;    //!< Current CRC.
 } nrf_dfu_response_crc_t;
 
 /**
@@ -188,7 +183,7 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t id;                         //!< The received ID which is echoed back.
+    uint8_t id; //!< The received ID which is echoed back.
 } nrf_dfu_response_ping_t;
 
 /**
@@ -196,7 +191,7 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t size;                      //!< The MTU size as specified by the local transport.
+    uint16_t size; //!< The MTU size as specified by the local transport.
 } nrf_dfu_response_mtu_t;
 
 /**
@@ -204,29 +199,28 @@ typedef struct
  */
 typedef struct
 {
-    nrf_dfu_op_t     request;                      //!< Requested operation.
-    nrf_dfu_result_t result;                       //!< Result of the operation.
-    union
-    {
-        nrf_dfu_response_protocol_t protocol;      //!< Protocol version response.
-        nrf_dfu_response_hardware_t hardware;      //!< Hardware version response.
-        nrf_dfu_response_firmware_t firmware;      //!< Firmware version response.
-        nrf_dfu_response_select_t   select;        //!< Select object response..
-        nrf_dfu_response_create_t   create;        //!< Create object response..
-        nrf_dfu_response_write_t    write;         //!< Write object response.
-        nrf_dfu_response_crc_t      crc;           //!< CRC response.
-        nrf_dfu_response_ping_t     ping;          //!< Ping response.
-        nrf_dfu_response_mtu_t      mtu;           //!< MTU response.
-        uint8_t			    ext_err;
+    nrf_dfu_op_t request;    //!< Requested operation.
+    nrf_dfu_result_t result; //!< Result of the operation.
+    union {
+        nrf_dfu_response_protocol_t protocol; //!< Protocol version response.
+        nrf_dfu_response_hardware_t hardware; //!< Hardware version response.
+        nrf_dfu_response_firmware_t firmware; //!< Firmware version response.
+        nrf_dfu_response_select_t select;     //!< Select object response..
+        nrf_dfu_response_create_t create;     //!< Create object response..
+        nrf_dfu_response_write_t write;       //!< Write object response.
+        nrf_dfu_response_crc_t crc;           //!< CRC response.
+        nrf_dfu_response_ping_t ping;         //!< Ping response.
+        nrf_dfu_response_mtu_t mtu;           //!< MTU response.
+        uint8_t ext_err;
     };
-} __attribute__ ((packed)) nrf_dfu_response_t ;
+} __attribute__((packed)) nrf_dfu_response_t;
 
 /**
  * @brief @ref NRF_DFU_OP_FIRMWARE_VERSION request details.
  */
 typedef struct
 {
-    uint8_t image_number;  //!< Index of the firmware.
+    uint8_t image_number; //!< Index of the firmware.
 } nrf_dfu_request_firmware_t;
 
 /**
@@ -234,7 +228,7 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t object_type;  //!< Object type. See @ref nrf_dfu_obj_type_t.
+    uint8_t object_type; //!< Object type. See @ref nrf_dfu_obj_type_t.
 } nrf_dfu_request_select_t;
 
 /**
@@ -243,8 +237,8 @@ typedef struct
 typedef struct
 {
     uint8_t object_type;  //!< Object type. See @ref nrf_dfu_obj_type_t.
-    uint32_t object_size;  //!< Object size in bytes.
-} __attribute__ ((packed)) nrf_dfu_request_create_t;
+    uint32_t object_size; //!< Object size in bytes.
+} __attribute__((packed)) nrf_dfu_request_create_t;
 
 /**
  * @brief @ref NRF_DFU_OP_OBJECT_WRITE request details.
@@ -261,7 +255,7 @@ typedef struct
  */
 typedef struct
 {
-    uint8_t id;             //!< Ping ID that will be returned in response.
+    uint8_t id; //!< Ping ID that will be returned in response.
 } nrf_dfu_request_ping_t;
 
 /**
@@ -278,27 +272,25 @@ typedef struct
  */
 typedef struct
 {
-    uint16_t target;        //!< Target PRN.
+    uint16_t target; //!< Target PRN.
 } nrf_dfu_request_prn_t;
-
 
 /**
  *@brief DFU request.
  */
 typedef struct
 {
-    nrf_dfu_op_t   request;     //!< Requested operation.
-    union
-    {
-        nrf_dfu_request_firmware_t firmware;    //!< Firmware version request.
-        nrf_dfu_request_select_t   select;      //!< Select object request.
-        nrf_dfu_request_create_t   create;      //!< Create object request.
-        nrf_dfu_request_write_t    write;       //!< Write object request.
-        nrf_dfu_request_ping_t     ping;        //!< Ping.
-        nrf_dfu_request_mtu_t      mtu;         //!< MTU size request.
-        nrf_dfu_request_prn_t      prn;         //!< Set receipt notification request.
+    nrf_dfu_op_t request; //!< Requested operation.
+    union {
+        nrf_dfu_request_firmware_t firmware; //!< Firmware version request.
+        nrf_dfu_request_select_t select;     //!< Select object request.
+        nrf_dfu_request_create_t create;     //!< Create object request.
+        nrf_dfu_request_write_t write;       //!< Write object request.
+        nrf_dfu_request_ping_t ping;         //!< Ping.
+        nrf_dfu_request_mtu_t mtu;           //!< MTU size request.
+        nrf_dfu_request_prn_t prn;           //!< Set receipt notification request.
     };
-} __attribute__ ((packed)) nrf_dfu_request_t;
+} __attribute__((packed)) nrf_dfu_request_t;
 
 #ifdef __cplusplus
 }
