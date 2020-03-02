@@ -29,6 +29,7 @@
 #include "log.h"
 #include "serialtty.h"
 #include "dfu.h"
+#include "dfu_ble.h"
 
 struct config conf;
 int ser_fd = -1;
@@ -39,19 +40,21 @@ static struct option options[] = {
 	{ "port",       required_argument,	NULL, 'p' },
 	{ "cmd",        required_argument,	NULL, 'c' },
 	{ "timeout",    required_argument,	NULL, 't' },
+    { "addr",       required_argument,	NULL, 'a' },
 	{ NULL, 0, NULL, 0 }
 };
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: nrfserdfu [options] DFUPKG.zip\n"
+	fprintf(stderr, "Usage: nrfserdfu [options] serial|ble DFUPKG.zip\n"
 			"Nordic NRF DFU Upgrade with DFUPKG.zip\n"
 			"Options:\n"
 			"  -h, --help\t\tShow help\n"
 			"  -v, --verbose=<level>\tLog level 1 or 2 (-vv)\n"
 			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
 			"  -c, --cmd <text>\tCommand to enter DFU mode\n"
-			"  -t, --timeout <num>\tTimeout after <num> tries (60)\n");
+			"  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
+            "  -a, --addr <mac>\tBLE MAC address to connect to\n");
 }
 
 static void main_options(int argc, char* argv[])
@@ -63,7 +66,7 @@ static void main_options(int argc, char* argv[])
 
 	int n = 0;
 	while (n >= 0) {
-		n = getopt_long(argc, argv, "hv::p:c:t:", options, NULL);
+		n = getopt_long(argc, argv, "hv::p:c:t:a:", options, NULL);
 		if (n < 0)
 			continue;
 		switch (n) {
@@ -85,10 +88,27 @@ static void main_options(int argc, char* argv[])
 		case 't':
 			conf.timeout = atoi(optarg);
 			break;
+        case 'a':
+			conf.ble_addr = optarg;
+			break;
 		}
 	}
 
-	/* first non-option argument is ZIP file */
+    /* first non-option argument is type serial/ble */
+	if (optind < argc) {
+        if (strncmp(argv[optind], "ser", 3) == 0) {
+            conf.dfu_type = DFU_SERIAL;
+            LOG_INF("Serial DFU");
+        } else if (strncmp(argv[optind], "ble", 3) == 0) {
+            conf.dfu_type = DFU_BLE;
+            LOG_INF("BLE DFU");
+        } else {
+            LOG_ERR("unknown DFU type %s", argv[optind]);
+        }
+        optind++;
+	}
+
+	/* second non-option argument is ZIP file */
 	if (optind < argc) {
 		conf.zipfile = argv[optind++];
 	}
@@ -214,7 +234,11 @@ int main(int argc, char *argv[])
 
 	main_options(argc, argv);
 
-	LOG_INF("Serial Port: %s", conf.serport);
+    if (conf.dfu_type == DFU_SERIAL) {
+	    LOG_INF("Serial Port: %s", conf.serport);
+    } else {
+        LOG_INF("BLE Target: %s", conf.ble_addr);
+    }
 	LOG_INF("DFU Package: %s", conf.zipfile);
 
 	zip_t* zip = zip_open(conf.zipfile, ZIP_RDONLY, NULL);
@@ -235,43 +259,47 @@ int main(int argc, char *argv[])
 		goto exit;
 	}
 
-	ser_fd = serial_init(conf.serport);
-	if (ser_fd <= 0) {
-		goto exit;
-	}
+    if (conf.dfu_type == DFU_SERIAL) {
+        ser_fd = serial_init(conf.serport);
+        if (ser_fd <= 0) {
+            goto exit;
+        }
 
-	/* first check if Bootloader responds to Ping */
-	LOG_NOTI_("Waiting for device to be ready: ");
-	int try = 0;
-	do {
-		if (conf.dfucmd) {
-			ret = enter_dfu_cmd();
-			sleep(1);
-			if (!ret) {
-				/* if dfu command failed, try ping, it will
-				 * usually fail with "Opcode not supported"
-				 * because of the text we sent before, but then
-				 * the next one below can succeed */
-				ret = dfu_ping();
-			}
-		} else {
-			sleep(1);
-		}
+        /* first check if Bootloader responds to Ping */
+        LOG_NOTI_("Waiting for device to be ready: ");
+        int try = 0;
+        do {
+            if (conf.dfucmd) {
+                ret = enter_dfu_cmd();
+                sleep(1);
+                if (!ret) {
+                    /* if dfu command failed, try ping, it will
+                    * usually fail with "Opcode not supported"
+                    * because of the text we sent before, but then
+                    * the next one below can succeed */
+                    ret = dfu_ping();
+                }
+            } else {
+                sleep(1);
+            }
 
-		if (conf.loglevel < LL_INFO) {
-			printf("."); fflush(stdout);
-		}
+            if (conf.loglevel < LL_INFO) {
+                printf("."); fflush(stdout);
+            }
 
-		ret = dfu_ping();
-	} while (!ret && ++try < conf.timeout);
+            ret = dfu_ping();
+        } while (!ret && ++try < conf.timeout);
 
-	LOG_NL(LL_NOTICE);
+        LOG_NL(LL_NOTICE);
 
-	if (try >= conf.timeout) {
-		LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
-		ret = EXIT_FAILURE;
-		goto exit;
-	}
+        if (try >= conf.timeout) {
+            LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
+            ret = EXIT_FAILURE;
+            goto exit;
+        }
+    } else {
+        ble_enter_dfu(conf.ble_addr);
+    }
 
 	LOG_NOTI("Starting DFU upgrade");
 
