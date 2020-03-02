@@ -299,16 +299,19 @@ int main(int argc, char *argv[])
         }
     } else {
         ble_enter_dfu(conf.ble_addr);
+        dfu_set_mtu(42);
     }
 
     LOG_NOTI("Starting DFU upgrade");
 
     /* Upgrade process */
-    if (!dfu_set_packet_receive_notification(0))
-        goto exit;
+    if (conf.dfu_type == DFU_SERIAL) {
+        if (!dfu_set_packet_receive_notification(0))
+            goto exit;
 
-    if (!dfu_get_serial_mtu())
-        goto exit;
+        if (!dfu_get_serial_mtu())
+            goto exit;
+    }
 
     LOG_NOTI_("Sending Init: ");
     if (!dfu_object_write_procedure(1, zf1, zs1))

@@ -24,6 +24,7 @@
 #include "conf.h"
 #include "dfu.h"
 #include "dfuserial.h"
+#include "dfu_ble.h"
 #include "log.h"
 #include "nrf_dfu_handling_error.h"
 #include "nrf_dfu_req_handler.h"
@@ -70,7 +71,11 @@ static bool send_request(nrf_dfu_request_t *req)
         return false;
     }
 
-    return ser_encode_write((uint8_t *)req, size);
+    if (conf.dfu_type == DFU_SERIAL) {
+        return ser_encode_write((uint8_t *)req, size);
+    } else {
+        return ble_write_ctrl((uint8_t *)req, size);
+    }
 }
 
 static const char *dfu_err_str(nrf_dfu_result_t res)
@@ -163,7 +168,13 @@ static const char *dfu_ext_err_str(nrf_dfu_ext_error_code_t res)
 
 static nrf_dfu_response_t *get_response(nrf_dfu_op_t request)
 {
-    const uint8_t *buf = ser_read_decode();
+    const uint8_t *buf = NULL;
+    if (conf.dfu_type == DFU_SERIAL) {
+        buf = ser_read_decode();
+    } else {
+        buf = ble_read();
+    }
+
     if (!buf) {
         /* error printed in function above */
         return NULL;
@@ -268,6 +279,10 @@ bool dfu_get_serial_mtu(void)
     return true;
 }
 
+bool dfu_set_mtu(uint16_t mtu) {
+    dfu_mtu = mtu;
+}
+
 uint32_t dfu_get_crc(void)
 {
     LOG_INF_("Get CRC: ");
@@ -357,7 +372,13 @@ bool dfu_object_write(zip_file_t *zf, size_t size)
         if (len == 0) { // EOF
             break;
         }
-        bool b = ser_encode_write(fbuf, len + 1);
+        bool b;
+        if (conf.dfu_type == DFU_SERIAL) {
+            b = ser_encode_write(fbuf, len + 1);
+        } else {
+            b = ble_write_data(fbuf, len + 1);
+            LOG_INF(".");
+        }
         if (!b) {
             LOG_ERR("write failed");
             return false;

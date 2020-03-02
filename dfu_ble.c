@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 
 #include <blzlib.h>
 #include <blzlib_util.h>
@@ -12,8 +13,12 @@
 #define SERVICE_CHANGED_UUID "2A05"
 
 static bool buttonless_noti = false;
+static bool control_noti = false;
+static blz *ctx;
 static blz_char* cp = NULL;
 static blz_char* dp = NULL;
+
+static uint8_t recv_buf[200];
 
 void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
 {
@@ -24,21 +29,37 @@ void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
     buttonless_noti = true;
 }
 
+void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
+{
+    LOG_INF("CP NOTI %zd %x %x %x", len, data[0], data[1], data[2]);
+    memcpy(recv_buf, data, len);
+
+    //if (conf.loglevel >= LL_DEBUG) {
+        printf("[ RX: ");
+        for (int i = 0; i < len; i++) {
+            printf("%x ", *(data + i));
+        }
+        printf("]\n");
+    //}
+
+    control_noti = true;
+}
+
 bool ble_enter_dfu(const char *address)
 {
-    blz *blz = blz_init("hci0");
+    ctx = blz_init("hci0");
 
-    blz_dev *dev = blz_connect(blz, address, NULL);
+    blz_dev *dev = blz_connect(ctx, address, NULL);
     if (dev == NULL) {
         LOG_ERR("could not connect");
-        blz_fini(blz);
+        blz_fini(ctx);
     }
 
     blz_char *bch = blz_get_char_from_uuid(dev, DFU_BUTTONLESS_UUID);
     if (bch == NULL) {
         LOG_ERR("could not find UUID");
         blz_disconnect(dev);
-        blz_fini(blz);
+        blz_fini(ctx);
     }
 
     blz_char_notify_start(bch, buttonless_notify_handler);
@@ -47,7 +68,7 @@ bool ble_enter_dfu(const char *address)
     blz_char_write(bch, &buf, 1);
 
     LOG_INF("Loop");
-    blz_loop_timeout(blz, &buttonless_noti, 10000000);
+    blz_loop_timeout(ctx, &buttonless_noti, 10000000);
     LOG_INF("Loop done");
     blz_disconnect(dev);
 
@@ -60,21 +81,34 @@ bool ble_enter_dfu(const char *address)
     snprintf(macs, sizeof(macs), MAC_FMT, MAC_PAR(mac));
     LOG_INF("DFUTarg %s", macs);
 
-    dev = blz_connect(blz, macs, NULL);
+    dev = blz_connect(ctx, macs, NULL);
     dp = blz_get_char_from_uuid(dev, DFU_DATA_UUID);
     cp = blz_get_char_from_uuid(dev, DFU_CONTROL_UUID);
     if (dp == NULL || cp == NULL) {
         LOG_ERR("could not find UUIDs");
         dp = cp = NULL;
         blz_disconnect(dev);
-        blz_fini(blz);
+        blz_fini(ctx);
     }
+
+    blz_char_notify_start(cp, control_notify_handler);
 }
 
-bool ble_write(uint8_t *req, size_t len)
+bool ble_write_ctrl(uint8_t *req, size_t len)
 {
+    blz_char_write(cp, req, len);
+}
+
+bool ble_write_data(uint8_t *req, size_t len)
+{
+    blz_char_write(dp, req, len);
 }
 
 const uint8_t *ble_read(void)
 {
+    LOG_INF("CP loop");
+    control_noti = false;
+    blz_loop_timeout(ctx, &control_noti, 10000000);
+    LOG_INF("CP loop done");
+    return recv_buf;
 }
