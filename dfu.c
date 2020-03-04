@@ -354,7 +354,8 @@ bool dfu_object_create(uint8_t type, uint32_t size)
 
 bool dfu_object_write(zip_file_t *zf, size_t size)
 {
-    uint8_t fbuf[(dfu_mtu - 1) / 2];
+    uint8_t buf[(dfu_mtu - 1) / 2];
+    uint8_t* fbuf = buf;
     size_t written = 0;
     zip_int64_t len;
     size_t to_read;
@@ -362,9 +363,16 @@ bool dfu_object_write(zip_file_t *zf, size_t size)
     LOG_INF_("Write data (MTU %d buf %zd): ", dfu_mtu, sizeof(fbuf));
 
     do {
-        fbuf[0] = NRF_DFU_OP_OBJECT_WRITE;
-        to_read = MIN(sizeof(fbuf) - 1, size - written);
-        len = zip_fread(zf, fbuf + 1, to_read);
+        if (conf.dfu_type == DFU_SERIAL) {
+            /* we need to put the write command first, so that leaves one
+             * byte less for data */
+            buf[0] = NRF_DFU_OP_OBJECT_WRITE;
+            fbuf = buf + 1;
+            to_read = MIN(sizeof(buf) - 1, size - written);
+        } else {
+            to_read = MIN(sizeof(buf), size - written);
+        }
+        len = zip_fread(zf, fbuf, to_read);
         if (len < 0) {
             LOG_ERR("zip_fread error");
             break;
@@ -374,9 +382,9 @@ bool dfu_object_write(zip_file_t *zf, size_t size)
         }
         bool b;
         if (conf.dfu_type == DFU_SERIAL) {
-            b = ser_encode_write(fbuf, len + 1);
+            b = ser_encode_write(buf, len + 1);
         } else {
-            b = ble_write_data(fbuf, len + 1);
+            b = ble_write_data(fbuf, len);
             LOG_INF(".");
         }
         if (!b) {
@@ -384,7 +392,7 @@ bool dfu_object_write(zip_file_t *zf, size_t size)
             return false;
         }
         written += len;
-        dfu_current_crc = crc32(dfu_current_crc, fbuf + 1, len);
+        dfu_current_crc = crc32(dfu_current_crc, fbuf, len);
     } while (len > 0 && written < size && written < dfu_max_size);
 
     // No response expected
