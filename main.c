@@ -34,25 +34,34 @@
 struct config conf;
 int ser_fd = -1;
 
-static struct option options[] = {
+static struct option ser_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"verbose", optional_argument, NULL, 'v'},
     {"port", required_argument, NULL, 'p'},
     {"cmd", required_argument, NULL, 'c'},
     {"timeout", required_argument, NULL, 't'},
+    {NULL, 0, NULL, 0}};
+
+static struct option ble_options[] = {
+    {"help", no_argument, NULL, 'h'},
+    {"verbose", optional_argument, NULL, 'v'},
     {"addr", required_argument, NULL, 'a'},
     {NULL, 0, NULL, 0}};
 
 static void usage(void)
 {
-    fprintf(stderr, "Usage: nrfserdfu [options] serial|ble DFUPKG.zip\n"
+    fprintf(stderr, "Usage: nrfserdfu serial|ble [options] DFUPKG.zip\n"
                     "Nordic NRF DFU Upgrade with DFUPKG.zip\n"
-                    "Options:\n"
+                    "Options (all):\n"
                     "  -h, --help\t\tShow help\n"
                     "  -v, --verbose=<level>\tLog level 1 or 2 (-vv)\n"
+                    "\n"
+                    "Options (serial):\n"
                     "  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
                     "  -c, --cmd <text>\tCommand to enter DFU mode\n"
                     "  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
+                    "\n"
+                    "Options (BLE):\n"
                     "  -a, --addr <mac>\tBLE MAC address to connect to\n");
 }
 
@@ -63,12 +72,28 @@ static void main_options(int argc, char *argv[])
     conf.loglevel = LL_NOTICE;
     conf.timeout = 60;
 
+    if (strncasecmp(argv[1], "ser", 3) == 0) {
+        conf.dfu_type = DFU_SERIAL;
+    } else if (strncasecmp(argv[1], "ble", 3) == 0) {
+        conf.dfu_type = DFU_BLE;
+    } else {
+        LOG_ERR("unknown DFU type %s", argv[1]);
+        return;
+    }
+
     int n = 0;
     while (n >= 0) {
-        n = getopt_long(argc, argv, "hv::p:c:t:a:", options, NULL);
+        if (conf.dfu_type == DFU_SERIAL) {
+            n = getopt_long(argc, argv, "hv::p:c:t:", ser_options, NULL);
+        } else {
+            n = getopt_long(argc, argv, "hv::a:", ble_options, NULL);
+        }
+
         if (n < 0)
             continue;
         switch (n) {
+        case '?':
+            exit(EXIT_FAILURE);
         case 'h':
             usage();
             exit(EXIT_SUCCESS);
@@ -93,27 +118,12 @@ static void main_options(int argc, char *argv[])
         }
     }
 
-    /* first non-option argument is type serial/ble */
+    /* last non-option argument is ZIP file */
     if (optind < argc) {
-        if (strncmp(argv[optind], "ser", 3) == 0) {
-            conf.dfu_type = DFU_SERIAL;
-            LOG_INF("Serial DFU");
-        } else if (strncmp(argv[optind], "ble", 3) == 0) {
-            conf.dfu_type = DFU_BLE;
-            LOG_INF("BLE DFU");
-        } else {
-            LOG_ERR("unknown DFU type %s", argv[optind]);
-        }
-        optind++;
-    }
-
-    /* second non-option argument is ZIP file */
-    if (optind < argc) {
-        conf.zipfile = argv[optind++];
-    }
-
-    if (optind < argc) {
-        LOG_ERR("Garbage arguments from %s", argv[optind]);
+        conf.zipfile = argv[optind+1];
+    } else {
+        LOG_ERR("ZIP file missing");
+        exit(EXIT_FAILURE);
     }
 }
 
