@@ -1,3 +1,22 @@
+/*
+ * nrfdfu - Nordic DFU Upgrade Utility
+ *
+ * Copyright (C) 2020 Bruno Randolf (br1@einfach.org)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
 #include <stdio.h>
 #include <string.h>
 
@@ -7,6 +26,7 @@
 #include "dfu_ble.h"
 #include "log.h"
 #include "conf.h"
+#include "util.h"
 
 #define DFU_CONTROL_UUID "8EC90001-F315-4F60-9FB8-838830DAEA50"
 #define DFU_DATA_UUID "8EC90002-F315-4F60-9FB8-838830DAEA50"
@@ -35,11 +55,7 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
     control_noti = true;
 
     if (conf.loglevel >= LL_DEBUG) {
-        printf("[ RX: ");
-        for (int i = 0; i < len; i++) {
-            printf("%d ", *(data + i));
-        }
-        printf("]\n");
+        dump_data("RX: ", data, len);
     }
 }
 
@@ -99,11 +115,7 @@ bool ble_write_ctrl(uint8_t *req, size_t len)
 bool ble_write_data(uint8_t *req, size_t len)
 {
     if (conf.loglevel >= LL_DEBUG) {
-        printf("[ TX: ");
-        for (int i = 0; i < len; i++) {
-            printf("%d ", *(req + i));
-        }
-        printf("]\n");
+        dump_data("TX: ", req, len);
     }
     blz_char_write(dp, req, len);
 }

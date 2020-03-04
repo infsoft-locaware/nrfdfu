@@ -17,16 +17,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef DFU_BLE_H
-#define DFU_BLE_H
-
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
+#include <stddef.h>
+#include <stdio.h>
 
-bool ble_enter_dfu(const char *address);
-bool ble_write_ctrl(uint8_t *req, size_t len);
-bool ble_write_data(uint8_t *req, size_t len);
-const uint8_t *ble_read(void);
+#include "util.h"
 
-#endif
+/* dump data in same format as nrfutil (integer) */
+void dump_data(const char* txt, const uint8_t *data, size_t len)
+{
+    printf("[ %s", txt);
+    for (int i = 0; i < len; i++) {
+            printf("%d ", *(data + i));
+        }
+        printf("]\n");
+}

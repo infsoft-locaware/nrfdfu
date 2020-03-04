@@ -46,11 +46,7 @@ bool ser_encode_write(uint8_t *req, size_t len)
     serial_write(ser_fd, buf, slip_len, SERIAL_TIMEOUT_SEC);
 
     if (conf.loglevel >= LL_DEBUG) {
-        printf("[ TX: ");
-        for (int i = 0; i < len; i++) {
-            printf("%d ", *(req + i));
-        }
-        printf("]\n");
+        dump_data("TX: ", req, len);
     }
 
     return true;
@@ -87,11 +83,7 @@ const uint8_t *ser_read_decode(void)
     } while (end != 1 || read_tries > MAX_READ_TRIES);
 
     if (conf.loglevel >= LL_DEBUG) {
-        printf("[ RX: ");
-        for (int i = 0; i < slip.current_index; i++) {
-            printf("%d ", slip.p_buffer[i]);
-        }
-        printf("]\n");
+        dump_data("RX: ", slip.p_buffer, slip.current_index);
     }
 
     return (end == 1 ? buf : NULL);
