@@ -275,7 +275,9 @@ bool dfu_get_serial_mtu(void)
                  SLIP_BUF_SIZE);
         dfu_mtu = SLIP_BUF_SIZE;
     }
-    LOG_INF("%d", dfu_mtu);
+    /* use MTU without SLIP overhead */
+    LOG_INF("%d with SLIP => %d", dfu_mtu, (dfu_mtu - 1) / 2);
+    dfu_mtu = (dfu_mtu - 1) / 2;
     return true;
 }
 
@@ -354,13 +356,13 @@ bool dfu_object_create(uint8_t type, uint32_t size)
 
 bool dfu_object_write(zip_file_t *zf, size_t size)
 {
-    uint8_t buf[(dfu_mtu - 1) / 2];
+    uint8_t buf[dfu_mtu];
     uint8_t* fbuf = buf;
     size_t written = 0;
     zip_int64_t len;
     size_t to_read;
 
-    LOG_INF_("Write data (size %zd MTU %d buf %zd): ", size, dfu_mtu, sizeof(buf));
+    LOG_INF_("Write data (size %zd MTU %d): ", size, dfu_mtu);
 
     do {
         if (conf.dfu_type == DFU_SERIAL) {
