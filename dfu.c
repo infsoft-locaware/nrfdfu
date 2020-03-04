@@ -491,10 +491,11 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t *zf, size_t sz)
 
     /* create and write objects of max_size */
     for (int i = offset; i < sz; i += dfu_max_size) {
-        if (!dfu_object_create(type, MIN(sz - i, dfu_max_size)))
+        size_t osz = MIN(sz - i, dfu_max_size);
+        if (!dfu_object_create(type, osz))
             return false;
 
-        if (!dfu_object_write(zf, sz))
+        if (!dfu_object_write(zf, osz))
             return false;
 
         uint32_t rcrc = dfu_get_crc();
