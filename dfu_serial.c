@@ -24,7 +24,7 @@
 #include <unistd.h>
 
 #include "conf.h"
-#include "dfuserial.h"
+#include "dfu_serial.h"
 #include "log.h"
 #include "serialtty.h"
 #include "slip.h"

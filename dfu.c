@@ -23,7 +23,7 @@
 
 #include "conf.h"
 #include "dfu.h"
-#include "dfuserial.h"
+#include "dfu_serial.h"
 #include "dfu_ble.h"
 #include "log.h"
 #include "nrf_dfu_handling_error.h"
