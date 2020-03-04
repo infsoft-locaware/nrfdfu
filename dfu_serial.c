@@ -28,6 +28,7 @@
 #include "log.h"
 #include "serialtty.h"
 #include "slip.h"
+#include "util.h"
 
 #define MAX_READ_TRIES 10000
 #define SERIAL_TIMEOUT_SEC 1
