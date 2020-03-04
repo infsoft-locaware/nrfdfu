@@ -72,12 +72,22 @@ static void main_options(int argc, char *argv[])
     conf.loglevel = LL_NOTICE;
     conf.timeout = 60;
 
+    if (argc <= 1) {
+        usage();
+        exit(EXIT_FAILURE);
+    }
+
     if (strncasecmp(argv[1], "ser", 3) == 0) {
         conf.dfu_type = DFU_SERIAL;
     } else if (strncasecmp(argv[1], "ble", 3) == 0) {
         conf.dfu_type = DFU_BLE;
+#ifndef BLE_SUPPORT
+        LOG_ERR("BLE Support is not compiled in");
+        exit(EXIT_FAILURE);
+#endif
     } else {
-        LOG_ERR("unknown DFU type %s", argv[1]);
+        LOG_ERR("Unknown DFU type %s", argv[1]);
+        exit(EXIT_FAILURE);
         return;
     }
 
@@ -118,9 +128,13 @@ static void main_options(int argc, char *argv[])
         }
     }
 
-    /* last non-option argument is ZIP file */
-    if (optind < argc) {
-        conf.zipfile = argv[optind+1];
+    /* last non-option argument is ZIP file.
+     * attention: getopt reorders argv... even if "ble" or "ser" were argv[1]
+     * before it may now be last */
+    if (argc > 2 && optind < argc
+        && strncasecmp(argv[argc - 1], "ser", 3) != 0
+        && strncasecmp(argv[argc - 1], "ble", 3) != 0 ) {
+        conf.zipfile = argv[argc - 1];
     } else {
         LOG_ERR("ZIP file missing");
         exit(EXIT_FAILURE);
