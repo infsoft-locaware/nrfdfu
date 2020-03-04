@@ -1,6 +1,6 @@
 # nrfdfu - Nordic Serial DFU #
 
-This is a C Implementation of Nordics Serial DFU protocol, targeted for embedded systems where running Python-based `nrfutil` is too heavy-weight.
+This is a C Implementation of Nordics DFU protocol over Serial and BLE, targeted for embedded systems where running Python-based `nrfutil` is too heavy-weight.
 
 
 ## Dependencies ##
@@ -9,12 +9,18 @@ This is a C Implementation of Nordics Serial DFU protocol, targeted for embedded
   * [ZLib](https://zlib.net/)
   * [LibZIP](https://libzip.org/)
 
+For BLE:
+
+  * [blzlib](https://github.com/infsoft-locaware/blzlib)
+  * [BlueZ](http://www.bluez.org/) version 5.49 and higher
+  * [libsystemd](https://www.freedesktop.org/wiki/Software/systemd/) SD-Bus library from systemd
+
 
 ## Compile on Ubuntu ##
 
 1.) Install dependencies:
 
-    sudo apt install libjson-c-dev zlib1g-dev
+    sudo apt install libjson-c-dev zlib1g-dev libsystemd-dev
 
 2.) Download and build libzip from https://libzip.org/
 
@@ -24,7 +30,15 @@ This is a C Implementation of Nordics Serial DFU protocol, targeted for embedded
     make
     sudo make install
 
-3.) Build nrfdfu:
+3.) Download and build blzlib from https://github.com/infsoft-locaware/blzlib
+
+    mkdir build
+    cd build/
+    cmake ..
+    make
+    sudo make install
+
+4.) Build nrfdfu:
 
     mkdir build
     cd build
