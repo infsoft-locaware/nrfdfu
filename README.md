@@ -9,7 +9,7 @@ This is a C Implementation of Nordics DFU protocol over Serial and BLE, targeted
   * [ZLib](https://zlib.net/)
   * [LibZIP](https://libzip.org/)
 
-For BLE:
+For BLE (optional):
 
   * [blzlib](https://github.com/infsoft-locaware/blzlib)
   * [BlueZ](http://www.bluez.org/) version 5.49 and higher
@@ -30,7 +30,7 @@ For BLE:
     make
     sudo make install
 
-3.) Download and build blzlib from https://github.com/infsoft-locaware/blzlib
+3.) Download and build blzlib from https://github.com/infsoft-locaware/blzlib for BLE support (optional)
 
     mkdir build
     cd build/
@@ -45,24 +45,40 @@ For BLE:
     cmake ..
     make
 
+You can use the CMake option `BLE_SUPPORT` to disable BLE support and the resulting
+library dependencies:
+
+    cmake -S . -B build2 -DBLE_SUPPORT=OFF
+
 
 ## Usage ##
 ```
-Usage: nrfserdfu [options] DFUPKG.zip
+Usage: nrfserdfu serial|ble [options] DFUPKG.zip
 Nordic NRF DFU Upgrade with DFUPKG.zip
-Options:
+Options (all):
   -h, --help            Show help
   -v, --verbose=<level> Log level 1 or 2 (-vv)
+
+Options (serial):
   -p, --port <tty>      Serial port (/dev/ttyUSB0)
   -c, --cmd <text>      Command to enter DFU mode
   -t, --timeout <num>   Timeout after <num> tries (60)
- ```
- 
+
+Options (BLE):
+  -a, --addr <mac>      BLE MAC address to connect to
+```
+
 Example:
 
-    ./build/nrfdfu -p /dev/ttyPL2303 -c dfu ~/dfu-update.zip
+    ./build/nrfdfu serial -p /dev/ttyPL2303 -c dfu ~/dfu-update.zip
 
-This is like typing "dfu" on the serial console (this is optional if the device is already in DFU mode) and then the Nordic DFU Upgrade is started over the same serial port. Use -v or -vv for a more verbose output.
+This is like typing "dfu" on the serial console (this is optional if the device is already in DFU mode) and then the Nordic DFU Upgrade is started over the same serial port.
+
+    ./build/nrfdfu ble -a 00:11:22:33:44:55 ~/dfu-update.zip
+
+Connect to BLE Device 00:11:22:33:44:55 and start DFU Upgrade procedure.
+
+Use -v or -vv for a more verbose output.
 
 
 ## License ##
