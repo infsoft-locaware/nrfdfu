@@ -45,6 +45,7 @@ const uint8_t *ble_read(void) {}
 static bool buttonless_noti = false;
 static bool control_noti = false;
 static blz *ctx;
+static blz_dev *dev;
 static blz_char* cp = NULL;
 static blz_char* dp = NULL;
 
@@ -71,24 +72,39 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
 bool ble_enter_dfu(const char *address)
 {
     ctx = blz_init("hci0");
+    if (ctx == NULL) {
+        LOG_ERR("Could not initialize BLE hci0");
+        return false;
+    }
 
-    blz_dev *dev = blz_connect(ctx, address, NULL);
+    LOG_NOTI("Connecting to %s...", address);
+    dev = blz_connect(ctx, address, NULL);
     if (dev == NULL) {
-        LOG_ERR("could not connect");
-        blz_fini(ctx);
+        LOG_ERR("Could not connect to %s", address);
+        return false;
     }
 
     blz_char *bch = blz_get_char_from_uuid(dev, DFU_BUTTONLESS_UUID);
     if (bch == NULL) {
-        LOG_ERR("could not find UUID");
-        blz_disconnect(dev);
-        blz_fini(ctx);
+        LOG_ERR("Could not find buttonless UUID");
+        return false;
     }
 
-    blz_char_notify_start(bch, buttonless_notify_handler);
+    bool b = blz_char_notify_start(bch, buttonless_notify_handler);
+    if (!b) {
+        LOG_ERR("Could not start buttonless notification");
+        return false;
+    }
+
+    LOG_NOTI("Enter DFU Bootloader");
 
     uint8_t buf = 0x01;
-    blz_char_write(bch, &buf, 1);
+    b = blz_char_write(bch, &buf, 1);
+    if (!b) {
+        LOG_ERR("Could not write buttonless");
+        return false;
+    }
+
     /* wait until notification is received with confirmation */
     blz_loop_timeout(ctx, &buttonless_noti, 10000000);
     blz_disconnect(dev);
@@ -100,25 +116,36 @@ bool ble_enter_dfu(const char *address)
     mac[5]++;
     char macs[20];
     snprintf(macs, sizeof(macs), MAC_FMT, MAC_PAR(mac));
-    LOG_INF("DFUTarg %s", macs);
+    LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
 
     dev = blz_connect(ctx, macs, NULL);
+    if (dev == NULL) {
+        LOG_ERR("Could not connect DfuTarg");
+        return false;
+    }
 
     dp = blz_get_char_from_uuid(dev, DFU_DATA_UUID);
     cp = blz_get_char_from_uuid(dev, DFU_CONTROL_UUID);
     if (dp == NULL || cp == NULL) {
-        LOG_ERR("could not find UUIDs");
+        LOG_ERR("Could not find DFU UUIDs");
         dp = cp = NULL;
-        blz_disconnect(dev);
-        blz_fini(ctx);
+        return false;
     }
 
-    blz_char_notify_start(cp, control_notify_handler);
+    b = blz_char_notify_start(cp, control_notify_handler);
+    if (!b) {
+        LOG_ERR("Could not start CP notification");
+        return false;
+    }
+    return true;
 }
 
 bool ble_write_ctrl(uint8_t *req, size_t len)
 {
-    blz_char_write(cp, req, len);
+    if (conf.loglevel >= LL_DEBUG) {
+        dump_data("CP: ", req, len);
+    }
+    return blz_char_write(cp, req, len);
 }
 
 bool ble_write_data(uint8_t *req, size_t len)
@@ -126,7 +153,7 @@ bool ble_write_data(uint8_t *req, size_t len)
     if (conf.loglevel >= LL_DEBUG) {
         dump_data("TX: ", req, len);
     }
-    blz_char_write(dp, req, len);
+    return blz_char_write(dp, req, len);
 }
 
 const uint8_t *ble_read(void)
@@ -134,7 +161,19 @@ const uint8_t *ble_read(void)
      /* wait until notification is received */
     control_noti = false;
     blz_loop_timeout(ctx, &control_noti, 10000000);
+
+    if (control_noti == false) {
+        LOG_ERR("BLE waiting for notification failed");
+        return NULL;
+    }
+
     return recv_buf;
+}
+
+void ble_fini(void)
+{
+    blz_disconnect(dev);
+    blz_fini(ctx);
 }
 
 #endif

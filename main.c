@@ -325,7 +325,12 @@ int main(int argc, char *argv[])
         if (!dfu_get_serial_mtu())
             goto exit;
     } else {
-        ble_enter_dfu(conf.ble_addr);
+        bool b = ble_enter_dfu(conf.ble_addr);
+        if (!b) {
+            ret = EXIT_FAILURE;
+            goto exit;
+        }
+
         dfu_set_mtu(244);
     }
 
@@ -356,6 +361,10 @@ exit:
         zip_fclose(zf2);
     if (zip)
         zip_close(zip);
-    serial_fini(ser_fd);
+    if (conf.dfu_type == DFU_SERIAL) {
+        serial_fini(ser_fd);
+    } else {
+        ble_fini();
+    }
     return ret;
 }
