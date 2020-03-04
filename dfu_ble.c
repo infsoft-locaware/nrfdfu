@@ -6,6 +6,7 @@
 
 #include "dfu_ble.h"
 #include "log.h"
+#include "conf.h"
 
 #define DFU_CONTROL_UUID "8EC90001-F315-4F60-9FB8-838830DAEA50"
 #define DFU_DATA_UUID "8EC90002-F315-4F60-9FB8-838830DAEA50"
@@ -34,13 +35,13 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
     LOG_INF("CP NOTI %zd %x %x %x", len, data[0], data[1], data[2]);
     memcpy(recv_buf, data, len);
 
-    //if (conf.loglevel >= LL_DEBUG) {
+    if (conf.loglevel >= LL_DEBUG) {
         printf("[ RX: ");
         for (int i = 0; i < len; i++) {
-            printf("%x ", *(data + i));
+            printf("%d ", *(data + i));
         }
         printf("]\n");
-    //}
+    }
 
     control_noti = true;
 }
@@ -82,6 +83,7 @@ bool ble_enter_dfu(const char *address)
     LOG_INF("DFUTarg %s", macs);
 
     dev = blz_connect(ctx, macs, NULL);
+
     dp = blz_get_char_from_uuid(dev, DFU_DATA_UUID);
     cp = blz_get_char_from_uuid(dev, DFU_CONTROL_UUID);
     if (dp == NULL || cp == NULL) {
@@ -101,6 +103,13 @@ bool ble_write_ctrl(uint8_t *req, size_t len)
 
 bool ble_write_data(uint8_t *req, size_t len)
 {
+    if (conf.loglevel >= LL_DEBUG) {
+        printf("[ TX: ");
+        for (int i = 0; i < len; i++) {
+            printf("%d ", *(req + i));
+        }
+        printf("]\n");
+    }
     blz_char_write(dp, req, len);
 }
 
