@@ -28,6 +28,15 @@
 #include "conf.h"
 #include "util.h"
 
+#ifndef BLE_SUPPORT
+
+bool ble_enter_dfu(const char *address) {}
+bool ble_write_ctrl(uint8_t *req, size_t len) {}
+bool ble_write_data(uint8_t *req, size_t len) {}
+const uint8_t *ble_read(void) {}
+
+#else
+
 #define DFU_CONTROL_UUID "8EC90001-F315-4F60-9FB8-838830DAEA50"
 #define DFU_DATA_UUID "8EC90002-F315-4F60-9FB8-838830DAEA50"
 #define DFU_BUTTONLESS_UUID "8EC90003-F315-4F60-9FB8-838830DAEA50"
@@ -127,3 +136,5 @@ const uint8_t *ble_read(void)
     blz_loop_timeout(ctx, &control_noti, 10000000);
     return recv_buf;
 }
+
+#endif

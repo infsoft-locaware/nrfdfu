@@ -11,6 +11,7 @@ find_package(ZLIB)
 
 if (BLE_SUPPORT)
 pkg_search_module(BLZ REQUIRED blzlib)
+add_definitions(-DBLE_SUPPORT)
 endif (BLE_SUPPORT)
 
 add_executable(nrfdfu main.c log.c util.c serialtty.c
