@@ -203,6 +203,7 @@ static nrf_dfu_response_t *get_response(nrf_dfu_op_t request)
     return resp;
 }
 
+/* serial only */
 bool dfu_ping(void)
 {
     static uint8_t ping_id = 1;
@@ -252,6 +253,7 @@ bool dfu_set_packet_receive_notification(uint16_t prn)
     return true;
 }
 
+/* serial only */
 bool dfu_get_serial_mtu(void)
 {
     LOG_INF_("Get serial MTU: ");
