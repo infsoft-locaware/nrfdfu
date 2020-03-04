@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
         }
     } else {
         ble_enter_dfu(conf.ble_addr);
-        dfu_set_mtu(42);
+        dfu_set_mtu(490);
     }
 
     LOG_NOTI("Starting DFU upgrade");
