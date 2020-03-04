@@ -23,7 +23,6 @@ static uint8_t recv_buf[200];
 
 void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
 {
-    LOG_INF("NOTI %zd %x %x %x", len, data[0], data[1], data[2]);
     if (data[2] != 0x01) {
         LOG_ERR("Unexpected response (%zd) %x %x %x", len, data[0], data[1], data[2]);
     }
@@ -32,8 +31,8 @@ void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
 
 void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
 {
-    LOG_INF("CP NOTI %zd %x %x %x", len, data[0], data[1], data[2]);
     memcpy(recv_buf, data, len);
+    control_noti = true;
 
     if (conf.loglevel >= LL_DEBUG) {
         printf("[ RX: ");
@@ -42,8 +41,6 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
         }
         printf("]\n");
     }
-
-    control_noti = true;
 }
 
 bool ble_enter_dfu(const char *address)
@@ -67,10 +64,8 @@ bool ble_enter_dfu(const char *address)
 
     uint8_t buf = 0x01;
     blz_char_write(bch, &buf, 1);
-
-    LOG_INF("Loop");
+    /* wait until notification is received with confirmation */
     blz_loop_timeout(ctx, &buttonless_noti, 10000000);
-    LOG_INF("Loop done");
     blz_disconnect(dev);
 
     // connect to DfuTarg
@@ -115,9 +110,8 @@ bool ble_write_data(uint8_t *req, size_t len)
 
 const uint8_t *ble_read(void)
 {
-    LOG_INF("CP loop");
+     /* wait until notification is received */
     control_noti = false;
     blz_loop_timeout(ctx, &control_noti, 10000000);
-    LOG_INF("CP loop done");
     return recv_buf;
 }

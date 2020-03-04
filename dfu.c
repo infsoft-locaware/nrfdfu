@@ -360,7 +360,7 @@ bool dfu_object_write(zip_file_t *zf, size_t size)
     zip_int64_t len;
     size_t to_read;
 
-    LOG_INF_("Write data (MTU %d buf %zd): ", dfu_mtu, sizeof(fbuf));
+    LOG_INF_("Write data (size %zd MTU %d buf %zd): ", size, dfu_mtu, sizeof(buf));
 
     do {
         if (conf.dfu_type == DFU_SERIAL) {
@@ -385,7 +385,6 @@ bool dfu_object_write(zip_file_t *zf, size_t size)
             b = ser_encode_write(buf, len + 1);
         } else {
             b = ble_write_data(fbuf, len);
-            LOG_INF(".");
         }
         if (!b) {
             LOG_ERR("write failed");
