@@ -87,7 +87,14 @@ bool ble_enter_dfu(const char *address)
     blz_char *bch = blz_get_char_from_uuid(dev, DFU_BUTTONLESS_UUID);
     if (bch == NULL) {
         LOG_ERR("Could not find buttonless UUID");
-        return false;
+        /* try to find characteristics of DfuTarg */
+        dp = blz_get_char_from_uuid(dev, DFU_DATA_UUID);
+        cp = blz_get_char_from_uuid(dev, DFU_CONTROL_UUID);
+        if (dp != NULL && cp != NULL) {
+            goto dfutarg_found;
+        } else {
+            return false;
+        }
     }
 
     bool b = blz_char_notify_start(bch, buttonless_notify_handler);
@@ -107,17 +114,18 @@ bool ble_enter_dfu(const char *address)
 
     /* wait until notification is received with confirmation */
     blz_loop_timeout(ctx, &buttonless_noti, 10000000);
-    blz_disconnect(dev);
 
-    // connect to DfuTarg
+    /* we don't disconnect here, because the device will reset and enter
+     * bootloader and appear under a new MAC and the connection times out */
+    //blz_disconnect(dev);
 
-    // increase MAC address by one
+    /* connect to DfuTarg: increase MAC address by one */
     uint8_t* mac = blz_string_to_mac_s(address);
     mac[5]++;
     char macs[20];
     snprintf(macs, sizeof(macs), MAC_FMT, MAC_PAR(mac));
-    LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
 
+    LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
     dev = blz_connect(ctx, macs, NULL);
     if (dev == NULL) {
         LOG_ERR("Could not connect DfuTarg");
@@ -132,6 +140,9 @@ bool ble_enter_dfu(const char *address)
         return false;
     }
 
+dfutarg_found:
+
+    LOG_NOTI("DFU characteristics found");
     b = blz_char_notify_start(cp, control_notify_handler);
     if (!b) {
         LOG_ERR("Could not start CP notification");
