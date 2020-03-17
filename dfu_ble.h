@@ -24,7 +24,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-bool ble_enter_dfu(const char *address);
+#include "conf.h"
+
+bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype);
 bool ble_write_ctrl(uint8_t *req, size_t len);
 bool ble_write_data(uint8_t *req, size_t len);
 const uint8_t *ble_read(void);

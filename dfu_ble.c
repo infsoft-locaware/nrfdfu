@@ -69,7 +69,7 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
     }
 }
 
-bool ble_enter_dfu(const char *address)
+bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
 {
     ctx = blz_init("hci0");
     if (ctx == NULL) {
@@ -77,8 +77,8 @@ bool ble_enter_dfu(const char *address)
         return false;
     }
 
-    LOG_NOTI("Connecting to %s...", address);
-    dev = blz_connect(ctx, address, BLZ_ADDR_RANDOM, NULL);
+    LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
+    dev = blz_connect(ctx, address, atype, NULL);
     if (dev == NULL) {
         LOG_ERR("Could not connect to %s", address);
         return false;
@@ -126,7 +126,7 @@ bool ble_enter_dfu(const char *address)
     snprintf(macs, sizeof(macs), MAC_FMT, MAC_PAR(mac));
 
     LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
-    dev = blz_connect(ctx, macs, BLZ_ADDR_RANDOM, NULL);
+    dev = blz_connect(ctx, macs, atype, NULL);
     if (dev == NULL) {
         LOG_ERR("Could not connect DfuTarg");
         return false;

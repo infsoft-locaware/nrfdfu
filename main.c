@@ -46,6 +46,7 @@ static struct option ble_options[] = {
     {"help", no_argument, NULL, 'h'},
     {"verbose", optional_argument, NULL, 'v'},
     {"addr", required_argument, NULL, 'a'},
+    {"atype", optional_argument, NULL, 't'},
     {NULL, 0, NULL, 0}};
 
 static void usage(void)
@@ -62,7 +63,8 @@ static void usage(void)
                     "  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
                     "\n"
                     "Options (BLE):\n"
-                    "  -a, --addr <mac>\tBLE MAC address to connect to\n");
+                    "  -a, --addr <mac>\tBLE MAC address to connect to\n"
+                    "  -t, --atype public|random\tBLE MAC address type (optional)\n");
 }
 
 static void main_options(int argc, char *argv[])
@@ -71,6 +73,7 @@ static void main_options(int argc, char *argv[])
     conf.serport = "/dev/ttyUSB0";
     conf.loglevel = LL_NOTICE;
     conf.timeout = 60;
+    conf.ble_atype = BAT_UNKNOWN;
 
     if (argc <= 1) {
         usage();
@@ -96,7 +99,7 @@ static void main_options(int argc, char *argv[])
         if (conf.dfu_type == DFU_SERIAL) {
             n = getopt_long(argc, argv, "hv::p:c:t:", ser_options, NULL);
         } else {
-            n = getopt_long(argc, argv, "hv::a:", ble_options, NULL);
+            n = getopt_long(argc, argv, "hv::a:t:", ble_options, NULL);
         }
 
         if (n < 0)
@@ -120,7 +123,15 @@ static void main_options(int argc, char *argv[])
             conf.dfucmd = optarg;
             break;
         case 't':
-            conf.timeout = atoi(optarg);
+            if (conf.dfu_type == DFU_SERIAL) {
+                conf.timeout = atoi(optarg);
+            } else {
+                if (strncasecmp(optarg, "pub", 3) == 0) {
+                    conf.ble_atype = BAT_PUBLIC;
+                } else if (strncasecmp(optarg, "rand", 4) == 0) {
+                    conf.ble_atype = BAT_RANDOM;
+                }
+            }
             break;
         case 'a':
             conf.ble_addr = optarg;
@@ -325,7 +336,7 @@ int main(int argc, char *argv[])
         if (!dfu_get_serial_mtu())
             goto exit;
     } else {
-        bool b = ble_enter_dfu(conf.ble_addr);
+        bool b = ble_enter_dfu(conf.ble_addr, conf.ble_atype);
         if (!b) {
             ret = EXIT_FAILURE;
             goto exit;

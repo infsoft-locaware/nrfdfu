@@ -28,6 +28,11 @@
 enum DFU_TYPE { DFU_SERIAL,
                 DFU_BLE };
 
+/* same as enum blz_addr_type */
+enum BLE_ATYPE { BAT_UNKNOWN,
+                 BAT_PUBLIC,
+                 BAT_RANDOM };
+
 struct config {
     int loglevel;
     char *serport;
@@ -36,6 +41,7 @@ struct config {
     int timeout;
     enum DFU_TYPE dfu_type;
     char *ble_addr;
+    enum BLE_ATYPE ble_atype;
 };
 
 extern struct config conf;
