@@ -20,9 +20,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <blzlib.h>
-#include <blzlib_util.h>
-
 #include "dfu_ble.h"
 #include "log.h"
 #include "conf.h"
@@ -37,6 +34,9 @@ const uint8_t *ble_read(void) {}
 
 #else
 
+#include <blzlib.h>
+#include <blzlib_util.h>
+
 #define DFU_CONTROL_UUID "8EC90001-F315-4F60-9FB8-838830DAEA50"
 #define DFU_DATA_UUID "8EC90002-F315-4F60-9FB8-838830DAEA50"
 #define DFU_BUTTONLESS_UUID "8EC90003-F315-4F60-9FB8-838830DAEA50"
@@ -44,8 +44,8 @@ const uint8_t *ble_read(void) {}
 
 static bool buttonless_noti = false;
 static bool control_noti = false;
-static blz *ctx;
-static blz_dev *dev;
+static blz *ctx = NULL;
+static blz_dev *dev = NULL;
 static blz_char* cp = NULL;
 static blz_char* dp = NULL;
 

@@ -220,7 +220,7 @@ static int read_manifest(zip_t *zip, char **dat, char **bin)
     return 0;
 }
 
-static bool enter_dfu_cmd(void)
+static bool serial_enter_dfu_cmd(void)
 {
     char b[200];
 
@@ -304,7 +304,7 @@ int main(int argc, char *argv[])
             = 0;
         do {
             if (conf.dfucmd) {
-                ret = enter_dfu_cmd();
+                ret = serial_enter_dfu_cmd();
                 sleep(1);
                 if (!ret) {
                     /* if dfu command failed, try ping, it will
