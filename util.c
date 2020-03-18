@@ -17,18 +17,18 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "util.h"
 
 /* dump data in same format as nrfutil (integer) */
-void dump_data(const char* txt, const uint8_t *data, size_t len)
+void dump_data(const char *txt, const uint8_t *data, size_t len)
 {
     printf("[ %s", txt);
     for (int i = 0; i < len; i++) {
-            printf("%d ", *(data + i));
-        }
-        printf("]\n");
+        printf("%d ", *(data + i));
+    }
+    printf("]\n");
 }

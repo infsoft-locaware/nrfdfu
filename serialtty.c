@@ -81,8 +81,9 @@ int serial_init(const char *dev)
 
 void serial_fini(int sock)
 {
-    if (sock < 0)
+    if (sock < 0) {
         return;
+    }
 
     /* unset DTR */
     int serialLines;
@@ -91,8 +92,9 @@ void serial_fini(int sock)
     ioctl(sock, TIOCMSET, &serialLines);
 
     /* reset terminal settings to original */
-    if (tcsetattr(sock, TCSANOW, &otty) != 0)
+    if (tcsetattr(sock, TCSANOW, &otty) != 0) {
         LOG_ERR("Couldn't reset termio attrs");
+    }
 
     close(sock);
 }

@@ -23,8 +23,8 @@
 
 #include "conf.h"
 #include "dfu.h"
-#include "dfu_serial.h"
 #include "dfu_ble.h"
+#include "dfu_serial.h"
 #include "log.h"
 #include "nrf_dfu_handling_error.h"
 #include "nrf_dfu_req_handler.h"
@@ -283,7 +283,8 @@ bool dfu_get_serial_mtu(void)
     return true;
 }
 
-bool dfu_set_mtu(uint16_t mtu) {
+bool dfu_set_mtu(uint16_t mtu)
+{
     dfu_mtu = mtu;
 }
 
@@ -359,7 +360,7 @@ bool dfu_object_create(uint8_t type, uint32_t size)
 bool dfu_object_write(zip_file_t *zf, size_t size)
 {
     uint8_t buf[dfu_mtu];
-    uint8_t* fbuf = buf;
+    uint8_t *fbuf = buf;
     size_t written = 0;
     zip_int64_t len;
     size_t to_read;

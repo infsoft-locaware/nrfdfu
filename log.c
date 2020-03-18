@@ -28,13 +28,15 @@ log_out(enum loglevel level, bool nl, const char *format, ...)
 {
     va_list args;
 
-    if (conf.loglevel < level)
+    if (conf.loglevel < level) {
         return;
+    }
 
     va_start(args, format);
     vprintf(format, args);
-    if (nl || conf.loglevel > level)
+    if (nl || conf.loglevel > level) {
         printf("\n");
+    }
 
     va_end(args);
 }

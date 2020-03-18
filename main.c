@@ -144,7 +144,7 @@ static void main_options(int argc, char *argv[])
      * before it may now be last */
     if (argc > 2 && optind < argc
         && strncasecmp(argv[argc - 1], "ser", 3) != 0
-        && strncasecmp(argv[argc - 1], "ble", 3) != 0 ) {
+        && strncasecmp(argv[argc - 1], "ble", 3) != 0) {
         conf.zipfile = argv[argc - 1];
     } else {
         LOG_ERR("ZIP file missing");

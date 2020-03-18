@@ -20,9 +20,9 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "conf.h"
 #include "dfu_ble.h"
 #include "log.h"
-#include "conf.h"
 #include "util.h"
 
 #ifndef BLE_SUPPORT
@@ -46,12 +46,12 @@ static bool buttonless_noti = false;
 static bool control_noti = false;
 static blz *ctx = NULL;
 static blz_dev *dev = NULL;
-static blz_char* cp = NULL;
-static blz_char* dp = NULL;
+static blz_char *cp = NULL;
+static blz_char *dp = NULL;
 
 static uint8_t recv_buf[200];
 
-void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
+void buttonless_notify_handler(const uint8_t *data, size_t len, blz_char *ch)
 {
     if (data[2] != 0x01) {
         LOG_ERR("Unexpected response (%zd) %x %x %x", len, data[0], data[1], data[2]);
@@ -59,7 +59,7 @@ void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
     buttonless_noti = true;
 }
 
-void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
+void control_notify_handler(const uint8_t *data, size_t len, blz_char *ch)
 {
     memcpy(recv_buf, data, len);
     control_noti = true;
@@ -120,7 +120,7 @@ bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
     //blz_disconnect(dev);
 
     /* connect to DfuTarg: increase MAC address by one */
-    uint8_t* mac = blz_string_to_mac_s(address);
+    uint8_t *mac = blz_string_to_mac_s(address);
     mac[5]++;
     char macs[20];
     snprintf(macs, sizeof(macs), MAC_FMT, MAC_PAR(mac));
@@ -169,7 +169,7 @@ bool ble_write_data(uint8_t *req, size_t len)
 
 const uint8_t *ble_read(void)
 {
-     /* wait until notification is received */
+    /* wait until notification is received */
     control_noti = false;
     blz_loop_timeout(ctx, &control_noti, 10000000);
 
