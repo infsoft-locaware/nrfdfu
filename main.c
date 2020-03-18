@@ -296,6 +296,7 @@ static bool serial_enter_dfu(void)
         LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
         return false;
     }
+    return ret;
 }
 
 int main(int argc, char *argv[])
