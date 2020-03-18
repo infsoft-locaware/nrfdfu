@@ -256,6 +256,48 @@ static bool serial_enter_dfu_cmd(void)
     }
 }
 
+static bool serial_enter_dfu(void)
+{
+    ser_fd = serial_init(conf.serport);
+    if (ser_fd <= 0) {
+        return false;
+    }
+
+    /* first check if Bootloader responds to Ping */
+    LOG_NOTI_("Waiting for device to be ready: ");
+    int try = 0;
+    bool ret = false;
+    do {
+        if (conf.dfucmd) {
+            ret = serial_enter_dfu_cmd();
+            sleep(1);
+            if (!ret) {
+                /* if dfu command failed, try ping, it will
+                    * usually fail with "Opcode not supported"
+                    * because of the text we sent before, but then
+                    * the next one below can succeed */
+                ret = dfu_ping();
+            }
+        } else {
+            sleep(1);
+        }
+
+        if (conf.loglevel < LL_INFO) {
+            printf(".");
+            fflush(stdout);
+        }
+
+        ret = dfu_ping();
+    } while (!ret && ++try < conf.timeout);
+
+    LOG_NL(LL_NOTICE);
+
+    if (try >= conf.timeout) {
+        LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
+        return false;
+    }
+}
+
 int main(int argc, char *argv[])
 {
     int ret = EXIT_FAILURE;
@@ -280,8 +322,8 @@ int main(int argc, char *argv[])
         goto exit;
     }
 
-    ret = read_manifest(zip, &dat, &bin);
-    if (ret < 0 || !dat || !bin) {
+    int man = read_manifest(zip, &dat, &bin);
+    if (man < 0 || !dat || !bin) {
         goto exit;
     }
 
@@ -293,52 +335,14 @@ int main(int argc, char *argv[])
     }
 
     if (conf.dfu_type == DFU_SERIAL) {
-        ser_fd = serial_init(conf.serport);
-        if (ser_fd <= 0) {
+        if (!serial_enter_dfu()) {
             goto exit;
         }
-
-        /* first check if Bootloader responds to Ping */
-        LOG_NOTI_("Waiting for device to be ready: ");
-        int try
-            = 0;
-        do {
-            if (conf.dfucmd) {
-                ret = serial_enter_dfu_cmd();
-                sleep(1);
-                if (!ret) {
-                    /* if dfu command failed, try ping, it will
-                    * usually fail with "Opcode not supported"
-                    * because of the text we sent before, but then
-                    * the next one below can succeed */
-                    ret = dfu_ping();
-                }
-            } else {
-                sleep(1);
-            }
-
-            if (conf.loglevel < LL_INFO) {
-                printf(".");
-                fflush(stdout);
-            }
-
-            ret = dfu_ping();
-        } while (!ret && ++try < conf.timeout);
-
-        LOG_NL(LL_NOTICE);
-
-        if (try >= conf.timeout) {
-            LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
-            ret = EXIT_FAILURE;
+        if (!dfu_get_serial_mtu()) {
             goto exit;
         }
-
-        if (!dfu_get_serial_mtu())
-            goto exit;
     } else {
-        bool b = ble_enter_dfu(conf.ble_addr, conf.ble_atype);
-        if (!b) {
-            ret = EXIT_FAILURE;
+        if (!ble_enter_dfu(conf.ble_addr, conf.ble_atype)) {
             goto exit;
         }
 
@@ -347,17 +351,20 @@ int main(int argc, char *argv[])
 
     LOG_NOTI("Starting DFU upgrade");
 
-    if (!dfu_set_packet_receive_notification(0))
+    if (!dfu_set_packet_receive_notification(0)) {
         goto exit;
+    }
 
     LOG_NOTI_("Sending Init: ");
-    if (!dfu_object_write_procedure(1, zf1, zs1))
+    if (!dfu_object_write_procedure(1, zf1, zs1)) {
         goto exit;
+    }
     LOG_NL(LL_NOTICE);
 
     LOG_NOTI_("Sending Firmware: ");
-    if (!dfu_object_write_procedure(2, zf2, zs2))
+    if (!dfu_object_write_procedure(2, zf2, zs2)) {
         goto exit;
+    }
     LOG_NL(LL_NOTICE);
     LOG_NOTI("Done");
 
@@ -366,12 +373,15 @@ int main(int argc, char *argv[])
 exit:
     free(bin);
     free(dat);
-    if (zf1)
+    if (zf1) {
         zip_fclose(zf1);
-    if (zf2)
+    }
+    if (zf2) {
         zip_fclose(zf2);
-    if (zip)
+    }
+    if (zip) {
         zip_close(zip);
+    }
     if (conf.dfu_type == DFU_SERIAL) {
         serial_fini(ser_fd);
     } else {
