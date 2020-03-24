@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "conf.h"
 #include "dfu_ble.h"
@@ -41,6 +42,7 @@ const uint8_t *ble_read(void) {}
 #define DFU_DATA_UUID "8EC90002-F315-4F60-9FB8-838830DAEA50"
 #define DFU_BUTTONLESS_UUID "8EC90003-F315-4F60-9FB8-838830DAEA50"
 #define SERVICE_CHANGED_UUID "2A05"
+#define CONNECT_MAX_TRY 3
 
 static bool buttonless_noti = false;
 static bool control_noti = false;
@@ -77,10 +79,18 @@ bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
         return false;
     }
 
-    LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
-    dev = blz_connect(ctx, address, atype, NULL);
-    if (dev == NULL) {
-        LOG_ERR("Could not connect to %s", address);
+    int try = 0;
+    do {
+        LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
+        dev = blz_connect(ctx, address, atype, NULL);
+        if (dev == NULL) {
+            LOG_ERR("Could not connect to %s", address);
+            sleep(5);
+        }
+    } while (dev == NULL && ++try < CONNECT_MAX_TRY);
+
+    if (try >= CONNECT_MAX_TRY) {
+        LOG_ERR("Gave up connecting to %s", address);
         return false;
     }
 
