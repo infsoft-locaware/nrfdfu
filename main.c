@@ -80,6 +80,7 @@ static void main_options(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
+    const char* type = argv[1];
     if (strncasecmp(argv[1], "ser", 3) == 0) {
         conf.dfu_type = DFU_SERIAL;
     } else if (strncasecmp(argv[1], "ble", 3) == 0) {
@@ -143,9 +144,8 @@ static void main_options(int argc, char *argv[])
      * attention: getopt reorders argv... even if "ble" or "ser" were argv[1]
      * before it may now be last */
     if (argc > 2 && optind < argc
-        && strncasecmp(argv[argc - 1], "ser", 3) != 0
-        && strncasecmp(argv[argc - 1], "ble", 3) != 0) {
-        conf.zipfile = argv[argc - 1];
+        && strcmp(argv[argc - 1], type) != 0) {
+            conf.zipfile = argv[argc - 1];
     } else {
         LOG_ERR("ZIP file missing");
         exit(EXIT_FAILURE);
