@@ -40,6 +40,7 @@ struct config {
     char *dfucmd;
     int timeout;
     enum DFU_TYPE dfu_type;
+    char *interface;
     char *ble_addr;
     enum BLE_ATYPE ble_atype;
 };

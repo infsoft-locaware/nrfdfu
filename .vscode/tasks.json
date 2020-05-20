@@ -10,12 +10,15 @@
         },
         {
             "label": "cmake build",
-            "type": "shell",
+			"type": "shell",
             "command": "cmake --build ${workspaceRoot}/build",
             "group": {
                 "kind": "build",
                 "isDefault": true
-            },
+			},
+			"problemMatcher": [
+				"$gcc"
+			],
             "dependsOn":["cmake conf"]
         }
     ]

@@ -47,6 +47,7 @@ static struct option ble_options[] = {
     {"verbose", optional_argument, NULL, 'v'},
     {"addr", required_argument, NULL, 'a'},
     {"atype", optional_argument, NULL, 't'},
+    {"intf", optional_argument, NULL, 'i'},
     {NULL, 0, NULL, 0}};
 
 static void usage(void)
@@ -64,7 +65,8 @@ static void usage(void)
                     "\n"
                     "Options (BLE):\n"
                     "  -a, --addr <mac>\tBLE MAC address to connect to\n"
-                    "  -t, --atype public|random\tBLE MAC address type (optional)\n");
+                    "  -t, --atype public|random\tBLE MAC address type (optional)\n"
+                    "  -i, --intf <name>\tBT interface name (hci0)\n");
 }
 
 static void main_options(int argc, char *argv[])
@@ -74,6 +76,7 @@ static void main_options(int argc, char *argv[])
     conf.loglevel = LL_NOTICE;
     conf.timeout = 60;
     conf.ble_atype = BAT_UNKNOWN;
+    conf.interface = "hci0";
 
     if (argc <= 1) {
         usage();
@@ -100,7 +103,7 @@ static void main_options(int argc, char *argv[])
         if (conf.dfu_type == DFU_SERIAL) {
             n = getopt_long(argc, argv, "hv::p:c:t:", ser_options, NULL);
         } else {
-            n = getopt_long(argc, argv, "hv::a:t:", ble_options, NULL);
+            n = getopt_long(argc, argv, "hv::a:t:i:", ble_options, NULL);
         }
 
         if (n < 0)
@@ -136,6 +139,9 @@ static void main_options(int argc, char *argv[])
             break;
         case 'a':
             conf.ble_addr = optarg;
+            break;
+        case 'i':
+            conf.interface = optarg;
             break;
         }
     }
@@ -343,7 +349,7 @@ int main(int argc, char *argv[])
             goto exit;
         }
     } else {
-        if (!ble_enter_dfu(conf.ble_addr, conf.ble_atype)) {
+        if (!ble_enter_dfu(conf.interface, conf.ble_addr, conf.ble_atype)) {
             goto exit;
         }
 

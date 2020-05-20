@@ -28,16 +28,18 @@
 
 #ifndef BLE_SUPPORT
 
-bool ble_enter_dfu(const char *address) {}
-bool ble_write_ctrl(uint8_t *req, size_t len) {}
-bool ble_write_data(uint8_t *req, size_t len) {}
-const uint8_t *ble_read(void) {}
+bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype) { return false; }
+bool ble_write_ctrl(uint8_t *req, size_t len) { return false; }
+bool ble_write_data(uint8_t *req, size_t len) { return false; }
+const uint8_t *ble_read(void) { return NULL; }
+void ble_fini(void) {}
 
 #else
 
 #include <blzlib.h>
 #include <blzlib_util.h>
 
+#define DFU_SERVICE_UUID "0000fe59-0000-1000-8000-00805f9b34fb"
 #define DFU_CONTROL_UUID "8EC90001-F315-4F60-9FB8-838830DAEA50"
 #define DFU_DATA_UUID "8EC90002-F315-4F60-9FB8-838830DAEA50"
 #define DFU_BUTTONLESS_UUID "8EC90003-F315-4F60-9FB8-838830DAEA50"
@@ -71,11 +73,11 @@ void control_notify_handler(const uint8_t *data, size_t len, blz_char *ch)
     }
 }
 
-bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
+bool ble_enter_dfu(const char* interface, const char *address, enum BLE_ATYPE atype)
 {
-    ctx = blz_init("hci0");
+    ctx = blz_init(interface);
     if (ctx == NULL) {
-        LOG_ERR("Could not initialize BLE hci0");
+        LOG_ERR("Could not initialize BLE interface '%s'", interface);
         return false;
     }
 
@@ -94,12 +96,18 @@ bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
         return false;
     }
 
-    blz_char *bch = blz_get_char_from_uuid(dev, DFU_BUTTONLESS_UUID);
+    blz_serv* srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
+    if (srv == NULL) {
+        LOG_ERR("DFU Service not found");
+        return false;
+    }
+
+    blz_char *bch = blz_get_char_from_uuid(srv, DFU_BUTTONLESS_UUID);
     if (bch == NULL) {
-        LOG_ERR("Could not find buttonless UUID");
+        LOG_ERR("Could not find buttonless DFU UUID");
         /* try to find characteristics of DfuTarg */
-        dp = blz_get_char_from_uuid(dev, DFU_DATA_UUID);
-        cp = blz_get_char_from_uuid(dev, DFU_CONTROL_UUID);
+        dp = blz_get_char_from_uuid(srv, DFU_DATA_UUID);
+        cp = blz_get_char_from_uuid(srv, DFU_CONTROL_UUID);
         if (dp != NULL && cp != NULL) {
             goto dfutarg_found;
         } else {
@@ -107,7 +115,7 @@ bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
         }
     }
 
-    bool b = blz_char_notify_start(bch, buttonless_notify_handler);
+    bool b = blz_char_indicate_start(bch, buttonless_notify_handler);
     if (!b) {
         LOG_ERR("Could not start buttonless notification");
         return false;
@@ -127,13 +135,12 @@ bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
 
     /* we don't disconnect here, because the device will reset and enter
      * bootloader and appear under a new MAC and the connection times out */
-    //blz_disconnect(dev);
+    blz_disconnect(dev);
 
     /* connect to DfuTarg: increase MAC address by one */
     uint8_t *mac = blz_string_to_mac_s(address);
-    mac[5]++;
-    char macs[20];
-    snprintf(macs, sizeof(macs), MAC_FMT, MAC_PAR(mac));
+    mac[0]++;
+    const char* macs = blz_mac_to_string_s(mac);
 
     LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
     dev = blz_connect(ctx, macs, atype, NULL);
@@ -142,8 +149,14 @@ bool ble_enter_dfu(const char *address, enum BLE_ATYPE atype)
         return false;
     }
 
-    dp = blz_get_char_from_uuid(dev, DFU_DATA_UUID);
-    cp = blz_get_char_from_uuid(dev, DFU_CONTROL_UUID);
+    srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
+    if (srv == NULL) {
+        LOG_ERR("DFU Service not found");
+        return false;
+    }
+
+    dp = blz_get_char_from_uuid(srv, DFU_DATA_UUID);
+    cp = blz_get_char_from_uuid(srv, DFU_CONTROL_UUID);
     if (dp == NULL || cp == NULL) {
         LOG_ERR("Could not find DFU UUIDs");
         dp = cp = NULL;
