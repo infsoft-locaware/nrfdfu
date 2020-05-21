@@ -187,7 +187,7 @@ bool ble_write_data(uint8_t *req, size_t len)
     if (conf.loglevel >= LL_DEBUG) {
         dump_data("TX: ", req, len);
     }
-    return blz_char_write(dp, req, len);
+    return blz_char_write_cmd(dp, req, len);
 }
 
 const uint8_t *ble_read(void)
