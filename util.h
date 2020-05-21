@@ -32,6 +32,6 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
 #endif
 
-void dump_data(const char* txt, const uint8_t *data, size_t len);
+void dump_data(const char* txt, const uint8_t* data, size_t len);
 
 #endif

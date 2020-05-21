@@ -25,24 +25,21 @@
 
 #define CONF_MAX_LEN 200
 
-enum DFU_TYPE { DFU_SERIAL,
-                DFU_BLE };
+enum DFU_TYPE { DFU_SERIAL, DFU_BLE };
 
 /* same as enum blz_addr_type */
-enum BLE_ATYPE { BAT_UNKNOWN,
-                 BAT_PUBLIC,
-                 BAT_RANDOM };
+enum BLE_ATYPE { BAT_UNKNOWN, BAT_PUBLIC, BAT_RANDOM };
 
 struct config {
-    int loglevel;
-    char *serport;
-    char *zipfile;
-    char *dfucmd;
-    int timeout;
-    enum DFU_TYPE dfu_type;
-    char *interface;
-    char *ble_addr;
-    enum BLE_ATYPE ble_atype;
+	int loglevel;
+	char* serport;
+	char* zipfile;
+	char* dfucmd;
+	int timeout;
+	enum DFU_TYPE dfu_type;
+	char* interface;
+	char* ble_addr;
+	enum BLE_ATYPE ble_atype;
 };
 
 extern struct config conf;
