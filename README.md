@@ -5,6 +5,8 @@ This is a C Implementation of Nordics DFU protocol over Serial and BLE, targeted
 
 ## Dependencies ##
 
+For Serial and BLE:
+
   * [JSON-C](https://github.com/json-c/json-c)
   * [ZLib](https://zlib.net/)
   * [LibZIP](https://libzip.org/)
@@ -66,6 +68,8 @@ Options (serial):
 
 Options (BLE):
   -a, --addr <mac>      BLE MAC address to connect to
+  -t, --atype public|random BLE MAC address type (optional)
+  -i, --intf <name>     BT interface name (hci0)
 ```
 
 Example:
@@ -85,7 +89,7 @@ Use -v or -vv for a more verbose output.
 
 This program is licensed under the GPLv3.
 
-Parts of it, the Nordic DFU definitions (nrf_dfu_req_handler.h) and SLIP (slip.c) are covered by the `5-Clause Nordic License`:
+Parts of it, the Nordic DFU definitions (nrf_dfu_req_handler.h) and SLIP (slip.c) are copied from the Nordic nRF5 SDK and covered by the `5-Clause Nordic License`:
 
 ```
 Copyright (c) 2015 - 2019, Nordic Semiconductor ASA
