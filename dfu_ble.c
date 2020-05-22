@@ -69,7 +69,8 @@ static blz_char* dp = NULL;
 
 static uint8_t recv_buf[200];
 
-void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
+void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
+							   void* user)
 {
 	if (data[2] != 0x01) {
 		LOG_ERR("Unexpected response (%zd) %x %x %x", len, data[0], data[1],
@@ -78,7 +79,8 @@ void buttonless_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
 	buttonless_noti = true;
 }
 
-void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch)
+void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
+							void* user)
 {
 	memcpy(recv_buf, data, len);
 	control_noti = true;
@@ -102,7 +104,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		= 0;
 	do {
 		LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
-		dev = blz_connect(ctx, address, atype, NULL);
+		dev = blz_connect(ctx, address, atype);
 		if (dev == NULL) {
 			LOG_ERR("Could not connect to %s", address);
 			sleep(5);
@@ -133,7 +135,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		}
 	}
 
-	bool b = blz_char_indicate_start(bch, buttonless_notify_handler);
+	bool b = blz_char_indicate_start(bch, buttonless_notify_handler, NULL);
 	if (!b) {
 		LOG_ERR("Could not start buttonless notification");
 		return false;
@@ -161,7 +163,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	const char* macs = blz_mac_to_string_s(mac);
 
 	LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
-	dev = blz_connect(ctx, macs, atype, NULL);
+	dev = blz_connect(ctx, macs, atype);
 	if (dev == NULL) {
 		LOG_ERR("Could not connect DfuTarg");
 		return false;
@@ -184,7 +186,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 dfutarg_found:
 
 	LOG_NOTI("DFU characteristics found");
-	b = blz_char_notify_start(cp, control_notify_handler);
+	b = blz_char_notify_start(cp, control_notify_handler, NULL);
 	if (!b) {
 		LOG_ERR("Could not start CP notification");
 		return false;
