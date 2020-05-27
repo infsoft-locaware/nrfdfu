@@ -255,19 +255,23 @@ static bool serial_enter_dfu_cmd(void)
 
 	int ret = read(ser_fd, b, 200);
 	if (ret > 0) {
-		/* debug output reply */
-		b[ret--] = '\0';
-		/* remove trailing \r \n */
-		while (b[ret] == '\r' || b[ret] == '\n') {
+		if (!conf.dfucmd_hex) {
+			/* debug output reply */
 			b[ret--] = '\0';
+			/* remove trailing \r \n */
+			while (b[ret] == '\r' || b[ret] == '\n') {
+				b[ret--] = '\0';
+			}
+			/* remove \r \n and zero from the beginning */
+			ret = 0;
+			while (b[ret] == '\r' || b[ret] == '\n'
+				|| b[ret] == '\0' && ret < sizeof(b)) {
+				ret++;
+			}
+			LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
+		} else {
+			LOG_INF("Device replied with %d bytes", ret);
 		}
-		/* remove \r \n and zero from the beginning */
-		ret = 0;
-		while (b[ret] == '\r' || b[ret] == '\n'
-			   || b[ret] == '\0' && ret < sizeof(b)) {
-			ret++;
-		}
-		LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
 		return true;
 	} else {
 		LOG_INF("Device didn't repy (%d)", ret);
