@@ -32,3 +32,34 @@ void dump_data(const char* txt, const uint8_t* data, size_t len)
 	}
 	printf("]\n");
 }
+
+static uint8_t hex_digit(char ch)
+{
+	if (('0' <= ch) && (ch <= '9')) {
+		ch -= '0';
+	} else {
+		if (('a' <= ch) && (ch <= 'f')) {
+			ch += 10 - 'a';
+		} else {
+			if (('A' <= ch) && (ch <= 'F')) {
+				ch += 10 - 'A';
+			} else {
+				ch = 16;
+			}
+		}
+	}
+	return ch;
+}
+
+bool hex_to_bin(const char* hex, uint8_t* bin, size_t len)
+{
+	if (hex == NULL || bin == NULL) {
+		return false;
+	}
+
+	for (size_t idx = 0; idx < len; ++idx) {
+		bin[idx] = hex_digit(hex[2 * idx]) << 4;
+		bin[idx] |= hex_digit(hex[1 + 2 * idx]);
+	}
+	return true;
+}

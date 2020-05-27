@@ -32,6 +32,9 @@
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof(*(x)))
 #endif
 
+#include <stdbool.h>
+
 void dump_data(const char* txt, const uint8_t* data, size_t len);
+bool hex_to_bin(const char* hex, uint8_t* bin, size_t len);
 
 #endif

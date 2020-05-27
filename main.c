@@ -30,6 +30,7 @@
 #include "dfu_ble.h"
 #include "log.h"
 #include "serialtty.h"
+#include "util.h"
 
 struct config conf;
 int ser_fd = -1;
@@ -38,6 +39,7 @@ static struct option ser_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"verbose", optional_argument, NULL, 'v'},
 									  {"port", required_argument, NULL, 'p'},
 									  {"cmd", required_argument, NULL, 'c'},
+									  {"hexcmd", required_argument, NULL, 'C'},
 									  {"timeout", required_argument, NULL, 't'},
 									  {NULL, 0, NULL, 0}};
 
@@ -60,6 +62,7 @@ static void usage(void)
 			"Options (serial):\n"
 			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
 			"  -c, --cmd <text>\tCommand to enter DFU mode\n"
+			"  -C, --hexcmd <hex>\tCommand to enter DFU mode in HEX\n"
 			"  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
 			"\n"
 			"Options (BLE):\n"
@@ -76,6 +79,7 @@ static void main_options(int argc, char* argv[])
 	conf.timeout = 60;
 	conf.ble_atype = BAT_UNKNOWN;
 	conf.interface = "hci0";
+	conf.dfucmd_hex = false;
 
 	if (argc <= 1) {
 		usage();
@@ -100,7 +104,7 @@ static void main_options(int argc, char* argv[])
 	int n = 0;
 	while (n >= 0) {
 		if (conf.dfu_type == DFU_SERIAL) {
-			n = getopt_long(argc, argv, "hv::p:c:t:", ser_options, NULL);
+			n = getopt_long(argc, argv, "hv::p:c:C:t:", ser_options, NULL);
 		} else {
 			n = getopt_long(argc, argv, "hv::a:t:i:", ble_options, NULL);
 		}
@@ -124,6 +128,10 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'c':
 			conf.dfucmd = optarg;
+			break;
+		case 'C':
+			conf.dfucmd = optarg;
+			conf.dfucmd_hex = true;
 			break;
 		case 't':
 			if (conf.dfu_type == DFU_SERIAL) {
@@ -232,11 +240,17 @@ static bool serial_enter_dfu_cmd(void)
 	read(ser_fd, b, 200);
 
 	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
-	/* it looks like the first two characters written are lost...
-	 * and we need \r to enter CLI */
-	serial_write(ser_fd, "\r\r\r", 3, 1);
-	serial_write(ser_fd, conf.dfucmd, strlen(conf.dfucmd), 1);
-	serial_write(ser_fd, "\r", 1, 1);
+	if (conf.dfucmd_hex) {
+		hex_to_bin(conf.dfucmd, b, strlen(conf.dfucmd));
+		size_t len = strlen(conf.dfucmd) / 2;
+		serial_write(ser_fd, b, len, 1);
+	} else {
+		/* it looks like the first two characters written are lost...
+		* and we need \r to enter CLI */
+		serial_write(ser_fd, "\r\r\r", 3, 1);
+		serial_write(ser_fd, conf.dfucmd, strlen(conf.dfucmd), 1);
+		serial_write(ser_fd, "\r", 1, 1);
+	}
 	sleep(1);
 
 	int ret = read(ser_fd, b, 200);

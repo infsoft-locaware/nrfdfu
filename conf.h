@@ -35,6 +35,7 @@ struct config {
 	char* serport;
 	char* zipfile;
 	char* dfucmd;
+	bool dfucmd_hex;
 	int timeout;
 	enum DFU_TYPE dfu_type;
 	char* interface;
