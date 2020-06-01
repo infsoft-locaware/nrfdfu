@@ -338,6 +338,10 @@ int main(int argc, char* argv[])
 	if (conf.dfu_type == DFU_SERIAL) {
 		LOG_INF("Serial Port: %s", conf.serport);
 	} else {
+		if (conf.ble_addr == NULL) {
+			LOG_ERR("Need BLE Target addr -a");
+			exit(EXIT_FAILURE);
+		}
 		LOG_INF("BLE Target: %s", conf.ble_addr);
 	}
 	LOG_INF("DFU Package: %s", conf.zipfile);
