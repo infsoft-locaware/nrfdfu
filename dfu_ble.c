@@ -99,9 +99,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		return false;
 	}
 
-	int
-	try
-		= 0;
+	int trynum = 0;
 	do {
 		LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
 		dev = blz_connect(ctx, address, atype);
@@ -109,9 +107,9 @@ bool ble_enter_dfu(const char* interface, const char* address,
 			LOG_ERR("Could not connect to %s", address);
 			sleep(5);
 		}
-	} while (dev == NULL && ++try < CONNECT_MAX_TRY);
+	} while (dev == NULL && ++trynum < CONNECT_MAX_TRY);
 
-	if (try >= CONNECT_MAX_TRY) {
+	if (trynum >= CONNECT_MAX_TRY) {
 		LOG_ERR("Gave up connecting to %s", address);
 		return false;
 	}
