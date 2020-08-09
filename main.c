@@ -242,7 +242,7 @@ static bool serial_enter_dfu_cmd(void)
 
 	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
 	if (conf.dfucmd_hex) {
-		hex_to_bin(conf.dfucmd, b, strlen(conf.dfucmd));
+		hex_to_bin(conf.dfucmd, (uint8_t*)b, strlen(conf.dfucmd));
 		size_t len = strlen(conf.dfucmd) / 2;
 		serial_write(ser_fd, b, len, 1);
 	} else {
@@ -265,8 +265,8 @@ static bool serial_enter_dfu_cmd(void)
 			}
 			/* remove \r \n and zero from the beginning */
 			ret = 0;
-			while (b[ret] == '\r' || b[ret] == '\n'
-				|| b[ret] == '\0' && ret < sizeof(b)) {
+			while ((b[ret] == '\r' || b[ret] == '\n'
+				|| b[ret] == '\0') && ret < sizeof(b)) {
 				ret++;
 			}
 			LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
