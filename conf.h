@@ -33,6 +33,7 @@ enum BLE_ATYPE { BAT_UNKNOWN, BAT_PUBLIC, BAT_RANDOM };
 struct config {
 	int loglevel;
 	char* serport;
+	int serspeed;
 	char* zipfile;
 	char* dfucmd;
 	bool dfucmd_hex;

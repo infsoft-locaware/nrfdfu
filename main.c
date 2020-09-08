@@ -32,12 +32,15 @@
 #include "serialtty.h"
 #include "util.h"
 
+#define DFU_SERIAL_BAUDRATE 115200
+
 struct config conf;
 int ser_fd = -1;
 
 static struct option ser_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"verbose", optional_argument, NULL, 'v'},
 									  {"port", required_argument, NULL, 'p'},
+									  {"baud", required_argument, NULL, 'b'},
 									  {"cmd", required_argument, NULL, 'c'},
 									  {"hexcmd", required_argument, NULL, 'C'},
 									  {"timeout", required_argument, NULL, 't'},
@@ -61,6 +64,7 @@ static void usage(void)
 			"\n"
 			"Options (serial):\n"
 			"  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
+			"  -b, --baud <num>\tSerial baud rate (115200)\n"
 			"  -c, --cmd <text>\tCommand to enter DFU mode\n"
 			"  -C, --hexcmd <hex>\tCommand to enter DFU mode in HEX\n"
 			"  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
@@ -75,6 +79,7 @@ static void main_options(int argc, char* argv[])
 {
 	/* defaults */
 	conf.serport = "/dev/ttyUSB0";
+	conf.serspeed = 115200;
 	conf.loglevel = LL_NOTICE;
 	conf.timeout = 60;
 	conf.ble_atype = BAT_UNKNOWN;
@@ -104,7 +109,7 @@ static void main_options(int argc, char* argv[])
 	int n = 0;
 	while (n >= 0) {
 		if (conf.dfu_type == DFU_SERIAL) {
-			n = getopt_long(argc, argv, "hv::p:c:C:t:", ser_options, NULL);
+			n = getopt_long(argc, argv, "hv::p:b:c:C:t:", ser_options, NULL);
 		} else {
 			n = getopt_long(argc, argv, "hv::a:t:i:", ble_options, NULL);
 		}
@@ -125,6 +130,9 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'p':
 			conf.serport = optarg;
+			break;
+		case 'b':
+			conf.serspeed = atoi(optarg);
 			break;
 		case 'c':
 			conf.dfucmd = optarg;
@@ -236,6 +244,8 @@ static bool serial_enter_dfu_cmd(void)
 {
 	char b[200];
 
+	serial_set_baudrate(ser_fd, conf.serspeed);
+
 	/* first read and discard anything that came before */
 	read(ser_fd, b, 200);
 
@@ -272,16 +282,19 @@ static bool serial_enter_dfu_cmd(void)
 		} else {
 			LOG_INF("Device replied with %d bytes", ret);
 		}
+
+		serial_set_baudrate(ser_fd, DFU_SERIAL_BAUDRATE);
 		return true;
 	} else {
 		LOG_INF("Device didn't repy (%d)", ret);
+		serial_set_baudrate(ser_fd, DFU_SERIAL_BAUDRATE);
 		return false;
 	}
 }
 
 static bool serial_enter_dfu(void)
 {
-	ser_fd = serial_init(conf.serport);
+	ser_fd = serial_init(conf.serport, DFU_SERIAL_BAUDRATE);
 	if (ser_fd <= 0) {
 		return false;
 	}
@@ -336,7 +349,7 @@ int main(int argc, char* argv[])
 	main_options(argc, argv);
 
 	if (conf.dfu_type == DFU_SERIAL) {
-		LOG_INF("Serial Port: %s", conf.serport);
+		LOG_INF("Serial Port: %s (%d baud)", conf.serport, conf.serspeed);
 	} else {
 		if (conf.ble_addr == NULL) {
 			LOG_ERR("Need BLE Target addr -a");

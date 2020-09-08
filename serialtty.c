@@ -36,9 +36,27 @@
 
 #define MAX_CONF_LEN 200
 
+static struct termios tty;
 static struct termios otty;
 
-int serial_init(const char* dev)
+static void serial_set_tty_speed(int baud)
+{
+	// clang-format off
+	switch (baud) {
+		case 57600:		tty.c_cflag |= B57600; break;
+		case 115200:	tty.c_cflag |= B115200; break;
+		case 230400:	tty.c_cflag |= B230400; break;
+		case 460800:	tty.c_cflag |= B460800; break;
+		case 500000:	tty.c_cflag |= B500000; break;
+		case 576000:	tty.c_cflag |= B576000; break;
+		case 921600:	tty.c_cflag |= B921600; break;
+		case 1000000:	tty.c_cflag |= B1000000; break;
+		default:		LOG_ERR("Unknown baudrate %d", baud);
+	}
+	// clang-format on
+
+}
+int serial_init(const char* dev, int baud)
 {
 	int fd = open(dev, O_RDWR | O_NOCTTY | O_NDELAY);
 	if (fd < 0) {
@@ -47,7 +65,6 @@ int serial_init(const char* dev)
 	}
 
 	/* set necessary serial port attributes */
-	struct termios tty;
 	memset(&tty, 0, sizeof tty);
 	memset(&otty, 0, sizeof tty);
 
@@ -65,8 +82,9 @@ int serial_init(const char* dev)
 
 	tty.c_iflag = IGNPAR;
 	tty.c_oflag = 0;
-	tty.c_cflag = B115200 | CLOCAL | CREAD | CS8;
+	tty.c_cflag = CLOCAL | CREAD | CS8;
 	tty.c_lflag = 0;
+	serial_set_tty_speed(baud);
 
 	tcflush(fd, TCIFLUSH);
 
@@ -148,4 +166,15 @@ bool serial_write(int fd, const char* buf, size_t len, int timeout_sec)
 	} while (pos < len);
 
 	return true;
+}
+
+bool serial_set_baudrate(int fd, int baud)
+{
+	tty.c_cflag = CLOCAL | CREAD | CS8;
+	serial_set_tty_speed(baud);
+
+	if (tcsetattr(fd, TCSAFLUSH, &tty) != 0) {
+		LOG_ERR("Couldn't set termio attrs baudrate");
+		return false;
+	}
 }

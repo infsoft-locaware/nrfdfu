@@ -22,10 +22,11 @@
 
 #include <stdbool.h>
 
-int serial_init(const char* device_name);
+int serial_init(const char* device_name, int baud);
 void serial_fini(int sock);
 bool serial_wait_read_ready(int fd, int sec);
 bool serial_wait_write_ready(int fd, int sec);
 bool serial_write(int fd, const char* buf, size_t len, int timeout_sec);
+bool serial_set_baudrate(int fd, int baud);
 
 #endif
