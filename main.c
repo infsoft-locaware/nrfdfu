@@ -195,7 +195,7 @@ static zip_file_t* zip_file_open(zip_t* zip, const char* name, size_t* size)
 /* dat and bin have to be freed by caller */
 static int read_manifest(zip_t* zip, char** dat, char** bin)
 {
-	char buf[200];
+	char buf[400];
 
 	zip_file_t* zf = zip_fopen(zip, "manifest.json", 0);
 	if (zf == NULL) {
@@ -213,9 +213,10 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 	json_object* json;
 	json_object* jobj;
 	json_object* jobj2;
-	json = json_tokener_parse(buf);
+	enum json_tokener_error json_err;
+	json = json_tokener_parse_verbose(buf, &json_err);
 	if (json == NULL) {
-		LOG_ERR("Manifest not valid JSON");
+		LOG_ERR("Manifest not valid JSON %d", json_err);
 		zip_fclose(zf);
 		return -1;
 	}
@@ -251,7 +252,7 @@ static bool serial_enter_dfu_cmd(void)
 
 	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
 	if (conf.dfucmd_hex) {
-		hex_to_bin(conf.dfucmd, b, strlen(conf.dfucmd));
+		hex_to_bin(conf.dfucmd, (uint8_t*)b, strlen(conf.dfucmd));
 		size_t len = strlen(conf.dfucmd) / 2;
 		serial_write(ser_fd, b, len, 1);
 	} else {
@@ -274,8 +275,8 @@ static bool serial_enter_dfu_cmd(void)
 			}
 			/* remove \r \n and zero from the beginning */
 			ret = 0;
-			while (b[ret] == '\r' || b[ret] == '\n'
-				|| b[ret] == '\0' && ret < sizeof(b)) {
+			while ((b[ret] == '\r' || b[ret] == '\n'
+				|| b[ret] == '\0') && ret < sizeof(b)) {
 				ret++;
 			}
 			LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
