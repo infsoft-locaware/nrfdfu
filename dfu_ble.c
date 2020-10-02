@@ -62,7 +62,8 @@ void ble_fini(void)
 
 static bool buttonless_noti = false;
 static bool control_noti = false;
-static blz* ctx = NULL;
+static bool disconnect_noti = false;
+static blz_ctx* ctx = NULL;
 static blz_dev* dev = NULL;
 static blz_char* cp = NULL;
 static blz_char* dp = NULL;
@@ -90,6 +91,10 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
 	}
 }
 
+static void disconnect_handler(void* user) {
+	disconnect_noti = true;
+}
+
 bool ble_enter_dfu(const char* interface, const char* address,
 				   enum BLE_ATYPE atype)
 {
@@ -113,6 +118,8 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		LOG_ERR("Gave up connecting to %s", address);
 		return false;
 	}
+
+	blz_set_disconnect_handler(dev, disconnect_handler, NULL);
 
 	blz_serv* srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
@@ -150,10 +157,24 @@ bool ble_enter_dfu(const char* interface, const char* address,
 
 	/* wait until notification is received with confirmation */
 	blz_loop_timeout(ctx, &buttonless_noti, 10000000);
+	if (!buttonless_noti) {
+		LOG_ERR("Timed out waiting for confirmation");
+		return false;
+	}
+
+	/* stop notification and remove event handler */
+	blz_char_notify_stop(bch);
 
 	/* we don't disconnect here, because the device will reset and enter
 	 * bootloader and appear under a new MAC and the connection times out */
-	blz_disconnect(dev);
+	//blz_disconnect(dev);
+
+	/* wait until disconnected */
+	blz_loop_timeout(ctx, &disconnect_noti, 10000000);
+	if (!disconnect_noti) {
+		LOG_ERR("Timed out waiting for disconnection");
+		return false;
+	}
 
 	/* connect to DfuTarg: increase MAC address by one */
 	uint8_t* mac = blz_string_to_mac_s(address);
@@ -213,8 +234,7 @@ const uint8_t* ble_read(void)
 	/* wait until notification is received */
 	control_noti = false;
 	blz_loop_timeout(ctx, &control_noti, 10000000);
-
-	if (control_noti == false) {
+	if (!control_noti) {
 		LOG_ERR("BLE waiting for notification failed");
 		return NULL;
 	}
@@ -224,7 +244,9 @@ const uint8_t* ble_read(void)
 
 void ble_fini(void)
 {
-	blz_disconnect(dev);
+	if (dev) {
+		blz_disconnect(dev);
+	}
 	blz_fini(ctx);
 }
 

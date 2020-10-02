@@ -21,6 +21,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <json-c/json.h>
 #include <zip.h>
@@ -338,6 +339,13 @@ static bool serial_enter_dfu(void)
 	return ret;
 }
 
+static void signal_handler(__attribute__((unused)) int signo)
+{
+	if (conf.dfu_type == DFU_BLE) {
+		ble_fini();
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	int ret = EXIT_FAILURE;
@@ -348,6 +356,13 @@ int main(int argc, char* argv[])
 	size_t zs1, zs2;
 
 	main_options(argc, argv);
+
+	/* register the signal SIGINT handler */
+	struct sigaction act;
+	act.sa_handler = signal_handler;
+	act.sa_flags = 0;
+	sigemptyset(&act.sa_mask);
+	sigaction(SIGINT, &act, NULL);
 
 	if (conf.dfu_type == DFU_SERIAL) {
 		LOG_INF("Serial Port: %s (%d baud)", conf.serport, conf.serspeed);
