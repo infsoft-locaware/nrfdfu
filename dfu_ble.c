@@ -156,7 +156,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	}
 
 	/* wait until notification is received with confirmation */
-	blz_loop_timeout(ctx, &buttonless_noti, 10000000);
+	blz_loop_wait(ctx, &buttonless_noti, 10000);
 	if (!buttonless_noti) {
 		LOG_ERR("Timed out waiting for confirmation");
 		return false;
@@ -170,7 +170,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	//blz_disconnect(dev);
 
 	/* wait until disconnected */
-	blz_loop_timeout(ctx, &disconnect_noti, 10000000);
+	blz_loop_wait(ctx, &disconnect_noti, 10000);
 	if (!disconnect_noti) {
 		LOG_ERR("Timed out waiting for disconnection");
 		return false;
@@ -233,7 +233,7 @@ const uint8_t* ble_read(void)
 {
 	/* wait until notification is received */
 	control_noti = false;
-	blz_loop_timeout(ctx, &control_noti, 10000000);
+	blz_loop_wait(ctx, &control_noti, 10000);
 	if (!control_noti) {
 		LOG_ERR("BLE waiting for notification failed");
 		return NULL;
