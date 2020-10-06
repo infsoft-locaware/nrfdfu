@@ -40,11 +40,9 @@ extern int ser_fd;
 bool ser_encode_write(uint8_t* req, size_t len)
 {
 	uint32_t slip_len;
-	ssize_t ret;
-	size_t pos = 0;
 	slip_encode(buf, (uint8_t*)req, len, &slip_len);
 
-	serial_write(ser_fd, buf, slip_len, SERIAL_TIMEOUT_SEC);
+	serial_write(ser_fd, (const char*)buf, slip_len, SERIAL_TIMEOUT_SEC);
 
 	if (conf.loglevel >= LL_DEBUG) {
 		dump_data("TX: ", req, len);

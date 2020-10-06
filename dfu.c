@@ -282,7 +282,7 @@ bool dfu_get_serial_mtu(void)
 	return true;
 }
 
-bool dfu_set_mtu(uint16_t mtu)
+void dfu_set_mtu(uint16_t mtu)
 {
 	dfu_mtu = mtu;
 }

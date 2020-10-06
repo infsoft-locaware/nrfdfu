@@ -27,7 +27,7 @@
 bool dfu_ping(void);
 bool dfu_set_packet_receive_notification(uint16_t prn);
 bool dfu_get_serial_mtu(void);
-bool dfu_set_mtu(uint16_t mtu);
+void dfu_set_mtu(uint16_t mtu);
 uint32_t dfu_get_crc(void);
 bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc);
 bool dfu_object_create(uint8_t type, uint32_t size);

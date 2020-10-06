@@ -177,4 +177,5 @@ bool serial_set_baudrate(int fd, int baud)
 		LOG_ERR("Couldn't set termio attrs baudrate");
 		return false;
 	}
+	return true;
 }
