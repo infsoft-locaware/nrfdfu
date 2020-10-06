@@ -3,23 +3,17 @@
     // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
-        {
-            "label": "cmake conf",
-            "type": "shell",
-            "command": "cmake -B ${workspaceRoot}/build -G Ninja ."
-        },
-        {
-            "label": "cmake build",
-			"type": "shell",
-            "command": "cmake --build ${workspaceRoot}/build",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-			},
+		{
+			"type": "meson",
+			"mode": "build",
 			"problemMatcher": [
 				"$gcc"
 			],
-            "dependsOn":["cmake conf"]
-        }
-    ]
+			"group": {
+                "kind": "build",
+                "isDefault": true
+            },
+			"label": "Meson: Build all targets"
+		}
+	]
 }
