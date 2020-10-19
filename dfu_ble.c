@@ -162,12 +162,8 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		return false;
 	}
 
-	/* stop notification and remove event handler */
-	blz_char_notify_stop(bch);
-
 	/* we don't disconnect here, because the device will reset and enter
 	 * bootloader and appear under a new MAC and the connection times out */
-	//blz_disconnect(dev);
 
 	/* wait until disconnected */
 	blz_loop_wait(ctx, &disconnect_noti, 10000);
@@ -175,6 +171,11 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		LOG_ERR("Timed out waiting for disconnection");
 		return false;
 	}
+
+	/* free device and service structures (also frees char and
+	 * unsubscribes notifications of bch) */
+	blz_disconnect(dev);
+	blz_serv_free(srv);
 
 	/* connect to DfuTarg: increase MAC address by one */
 	uint8_t* mac = blz_string_to_mac_s(address);
