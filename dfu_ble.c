@@ -65,6 +65,7 @@ static bool control_noti = false;
 static bool disconnect_noti = false;
 static blz_ctx* ctx = NULL;
 static blz_dev* dev = NULL;
+static blz_serv* srv = NULL;
 static blz_char* cp = NULL;
 static blz_char* dp = NULL;
 
@@ -121,7 +122,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 
 	blz_set_disconnect_handler(dev, disconnect_handler, NULL);
 
-	blz_serv* srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
+	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
 		LOG_ERR("DFU Service not found");
 		return false;
@@ -247,6 +248,9 @@ void ble_fini(void)
 {
 	if (dev) {
 		blz_disconnect(dev);
+	}
+	if (srv) {
+		blz_serv_free(srv); // also frees chars
 	}
 	blz_fini(ctx);
 }
