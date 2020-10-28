@@ -29,15 +29,13 @@
 #include "conf.h"
 #include "dfu.h"
 #include "dfu_ble.h"
+#include "dfu_serial.h"
 #include "log.h"
 #include "serialtty.h"
 #include "util.h"
 
-#define DFU_SERIAL_BAUDRATE 115200
-
 bool terminate = false;
 struct config conf;
-int ser_fd = -1;
 
 static struct option ser_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"verbose", optional_argument, NULL, 'v'},
@@ -243,101 +241,6 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 	return 0;
 }
 
-static bool serial_enter_dfu_cmd(void)
-{
-	char b[200];
-
-	serial_set_baudrate(ser_fd, conf.serspeed);
-
-	/* first read and discard anything that came before */
-	read(ser_fd, b, 200);
-
-	LOG_INF("Sending command to enter DFU mode: '%s'", conf.dfucmd);
-	if (conf.dfucmd_hex) {
-		hex_to_bin(conf.dfucmd, (uint8_t*)b, strlen(conf.dfucmd));
-		size_t len = strlen(conf.dfucmd) / 2;
-		serial_write(ser_fd, b, len, 1);
-	} else {
-		/* it looks like the first two characters written are lost...
-		 * and we need \r to enter CLI */
-		serial_write(ser_fd, "\r\r\r", 3, 1);
-		serial_write(ser_fd, conf.dfucmd, strlen(conf.dfucmd), 1);
-		serial_write(ser_fd, "\r", 1, 1);
-	}
-	sleep(1);
-
-	int ret = read(ser_fd, b, 200);
-	if (ret > 0) {
-		if (!conf.dfucmd_hex) {
-			/* debug output reply */
-			b[ret--] = '\0';
-			/* remove trailing \r \n */
-			while (b[ret] == '\r' || b[ret] == '\n') {
-				b[ret--] = '\0';
-			}
-			/* remove \r \n and zero from the beginning */
-			ret = 0;
-			while ((b[ret] == '\r' || b[ret] == '\n' || b[ret] == '\0')
-				   && ret < sizeof(b)) {
-				ret++;
-			}
-			LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
-		} else {
-			LOG_INF("Device replied with %d bytes", ret);
-		}
-
-		serial_set_baudrate(ser_fd, DFU_SERIAL_BAUDRATE);
-		return true;
-	} else {
-		LOG_INF("Device didn't repy (%d)", ret);
-		serial_set_baudrate(ser_fd, DFU_SERIAL_BAUDRATE);
-		return false;
-	}
-}
-
-static bool serial_enter_dfu(void)
-{
-	ser_fd = serial_init(conf.serport, DFU_SERIAL_BAUDRATE);
-	if (ser_fd <= 0) {
-		return false;
-	}
-
-	/* first check if Bootloader responds to Ping */
-	LOG_NOTI_("Waiting for device to be ready: ");
-	int ntry = 0;
-	bool ret = false;
-	do {
-		if (conf.dfucmd) {
-			ret = serial_enter_dfu_cmd();
-			sleep(1);
-			if (!ret) {
-				/* if dfu command failed, try ping, it will
-				 * usually fail with "Opcode not supported"
-				 * because of the text we sent before, but then
-				 * the next one below can succeed */
-				ret = dfu_ping();
-			}
-		} else {
-			sleep(1);
-		}
-
-		if (conf.loglevel < LL_INFO) {
-			printf(".");
-			fflush(stdout);
-		}
-
-		ret = dfu_ping();
-	} while (!ret && ++ntry < conf.timeout && !terminate);
-
-	LOG_NL(LL_NOTICE);
-
-	if (ntry >= conf.timeout) {
-		LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
-		return false;
-	}
-	return ret;
-}
-
 static void signal_handler(__attribute__((unused)) int signo)
 {
 	terminate = true;
@@ -394,7 +297,7 @@ int main(int argc, char* argv[])
 	}
 
 	if (conf.dfu_type == DFU_SERIAL) {
-		if (!serial_enter_dfu()) {
+		if (!ser_enter_dfu()) {
 			goto exit;
 		}
 		if (!dfu_get_serial_mtu()) {
@@ -442,7 +345,7 @@ exit:
 		zip_close(zip);
 	}
 	if (conf.dfu_type == DFU_SERIAL) {
-		serial_fini(ser_fd);
+		ser_fini();
 	} else {
 		ble_fini();
 	}

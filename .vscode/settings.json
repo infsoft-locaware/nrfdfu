@@ -1,6 +1,8 @@
 {
     "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
     "files.associations": {
-        "blzlib.h": "c"
-    }
+		"blzlib.h": "c",
+		"exception": "c",
+		"thread": "c"
+	}
 }
