@@ -35,6 +35,7 @@
 
 #define DFU_SERIAL_BAUDRATE 115200
 
+static bool terminate = false;
 struct config conf;
 int ser_fd = -1;
 
@@ -82,7 +83,7 @@ static void main_options(int argc, char* argv[])
 	conf.serport = "/dev/ttyUSB0";
 	conf.serspeed = 115200;
 	conf.loglevel = LL_NOTICE;
-	conf.timeout = 60;
+	conf.timeout = 10;
 	conf.ble_atype = BAT_UNKNOWN;
 	conf.interface = "hci0";
 	conf.dfucmd_hex = false;
@@ -328,7 +329,7 @@ static bool serial_enter_dfu(void)
 		}
 
 		ret = dfu_ping();
-	} while (!ret && ++try < conf.timeout);
+	} while (!ret && ++try < conf.timeout && !terminate);
 
 	LOG_NL(LL_NOTICE);
 
@@ -341,6 +342,7 @@ static bool serial_enter_dfu(void)
 
 static void signal_handler(__attribute__((unused)) int signo)
 {
+	terminate = true;
 	if (conf.dfu_type == DFU_BLE) {
 		ble_fini();
 	}
