@@ -30,7 +30,7 @@
 #include "slip.h"
 #include "util.h"
 
-#define MAX_READ_TRIES	   10000
+#define MAX_READ_TRIES	   SLIP_BUF_SIZE
 #define SERIAL_TIMEOUT_SEC 1
 
 static uint8_t buf[SLIP_BUF_SIZE];
@@ -78,7 +78,7 @@ const uint8_t* ser_read_decode(void)
 		} else if (ret > 0) {
 			end = slip_decode_add_byte(&slip, read_buf);
 		}
-	} while (end != 1 || read_tries > MAX_READ_TRIES);
+	} while (end != 1 && read_tries < MAX_READ_TRIES);
 
 	if (conf.loglevel >= LL_DEBUG) {
 		dump_data("RX: ", slip.p_buffer, slip.current_index);
