@@ -220,13 +220,14 @@ bool dfu_ping(void)
 
 	nrf_dfu_response_t* resp = get_response(req.request);
 	if (!resp) {
+		LOG_INF("Failed to read response");
 		return false;
 	}
 
 	if (resp->ping.id == ping_id - 1) {
 		LOG_INF("OK");
 	} else {
-		LOG_INF("Failed");
+		LOG_INF("Wrong ID");
 	}
 	return (resp->ping.id == ping_id - 1);
 }

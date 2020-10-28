@@ -19,9 +19,9 @@
 
 #define _GNU_SOURCE
 #include <getopt.h>
+#include <signal.h>
 #include <string.h>
 #include <unistd.h>
-#include <signal.h>
 
 #include <json-c/json.h>
 #include <zip.h>
@@ -35,7 +35,7 @@
 
 #define DFU_SERIAL_BAUDRATE 115200
 
-static bool terminate = false;
+bool terminate = false;
 struct config conf;
 int ser_fd = -1;
 
@@ -259,7 +259,7 @@ static bool serial_enter_dfu_cmd(void)
 		serial_write(ser_fd, b, len, 1);
 	} else {
 		/* it looks like the first two characters written are lost...
-		* and we need \r to enter CLI */
+		 * and we need \r to enter CLI */
 		serial_write(ser_fd, "\r\r\r", 3, 1);
 		serial_write(ser_fd, conf.dfucmd, strlen(conf.dfucmd), 1);
 		serial_write(ser_fd, "\r", 1, 1);
@@ -277,8 +277,8 @@ static bool serial_enter_dfu_cmd(void)
 			}
 			/* remove \r \n and zero from the beginning */
 			ret = 0;
-			while ((b[ret] == '\r' || b[ret] == '\n'
-				|| b[ret] == '\0') && ret < sizeof(b)) {
+			while ((b[ret] == '\r' || b[ret] == '\n' || b[ret] == '\0')
+				   && ret < sizeof(b)) {
 				ret++;
 			}
 			LOG_INF("Device replied: '%s' (%d)", b + ret, ret);
@@ -304,9 +304,7 @@ static bool serial_enter_dfu(void)
 
 	/* first check if Bootloader responds to Ping */
 	LOG_NOTI_("Waiting for device to be ready: ");
-	int
-	try
-		= 0;
+	int ntry = 0;
 	bool ret = false;
 	do {
 		if (conf.dfucmd) {
@@ -329,11 +327,11 @@ static bool serial_enter_dfu(void)
 		}
 
 		ret = dfu_ping();
-	} while (!ret && ++try < conf.timeout && !terminate);
+	} while (!ret && ++ntry < conf.timeout && !terminate);
 
 	LOG_NL(LL_NOTICE);
 
-	if (try >= conf.timeout) {
+	if (ntry >= conf.timeout) {
 		LOG_NOTI("Device didn't respond after %d tries", conf.timeout);
 		return false;
 	}
