@@ -60,6 +60,7 @@ void ble_fini(void)
 #define SERVICE_CHANGED_UUID "2A05"
 #define CONNECT_MAX_TRY		 3
 
+static bool terminate = false;
 static bool buttonless_noti = false;
 static bool control_noti = false;
 static bool disconnect_noti = false;
@@ -109,14 +110,18 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	do {
 		LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
 		dev = blz_connect(ctx, address, atype);
-		if (dev == NULL) {
+		if (dev == NULL && !terminate) {
 			LOG_ERR("Could not connect to %s", address);
 			sleep(5);
 		}
-	} while (dev == NULL && ++trynum < CONNECT_MAX_TRY);
+	} while (dev == NULL && ++trynum < CONNECT_MAX_TRY && !terminate);
 
 	if (trynum >= CONNECT_MAX_TRY) {
 		LOG_ERR("Gave up connecting to %s", address);
+		return false;
+	}
+
+	if (terminate) {
 		return false;
 	}
 
@@ -248,11 +253,18 @@ void ble_fini(void)
 {
 	if (dev) {
 		blz_disconnect(dev);
+		dev = NULL;
 	}
 	if (srv) {
 		blz_serv_free(srv); // also frees chars
+		srv = NULL;
 	}
 	blz_fini(ctx);
+	ctx = NULL;
+	buttonless_noti = true;
+	disconnect_noti = true;
+	control_noti = true;
+	terminate = true;
 }
 
 #endif
