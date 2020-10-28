@@ -119,6 +119,10 @@ void serial_fini(int sock)
 
 bool serial_wait_read_ready(int fd, int sec)
 {
+	if (fd < 0) {
+		return false;
+	}
+
 	struct timeval tv = {};
 	fd_set fds = {};
 	tv.tv_sec = sec;
@@ -130,6 +134,10 @@ bool serial_wait_read_ready(int fd, int sec)
 
 bool serial_wait_write_ready(int fd, int sec)
 {
+	if (fd < 0) {
+		return false;
+	}
+
 	struct timeval tv = {};
 	fd_set fds = {};
 	tv.tv_sec = sec;
@@ -144,6 +152,10 @@ bool serial_write(int fd, const char* buf, size_t len, int timeout_sec)
 {
 	ssize_t ret;
 	size_t pos = 0;
+
+	if (fd < 0) {
+		return false;
+	}
 
 	do {
 		ret = write(fd, buf + pos, len - pos);
@@ -170,6 +182,10 @@ bool serial_write(int fd, const char* buf, size_t len, int timeout_sec)
 
 bool serial_set_baudrate(int fd, int baud)
 {
+	if (fd < 0) {
+		return false;
+	}
+
 	tty.c_cflag = CLOCAL | CREAD | CS8;
 	serial_set_tty_speed(baud);
 

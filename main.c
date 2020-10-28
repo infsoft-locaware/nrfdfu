@@ -34,7 +34,6 @@
 #include "serialtty.h"
 #include "util.h"
 
-bool terminate = false;
 struct config conf;
 
 static struct option ser_options[] = {{"help", no_argument, NULL, 'h'},
@@ -243,8 +242,9 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 
 static void signal_handler(__attribute__((unused)) int signo)
 {
-	terminate = true;
-	if (conf.dfu_type == DFU_BLE) {
+	if (conf.dfu_type == DFU_SERIAL) {
+		ser_fini();
+	} else {
 		ble_fini();
 	}
 }

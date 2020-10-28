@@ -37,20 +37,20 @@
 
 static uint8_t buf[SLIP_BUF_SIZE];
 static int ser_fd = -1;
-extern bool terminate;
+static bool terminate;
 
 bool ser_encode_write(uint8_t* req, size_t len)
 {
 	uint32_t slip_len;
 	slip_encode(buf, (uint8_t*)req, len, &slip_len);
 
-	serial_write(ser_fd, (const char*)buf, slip_len, SERIAL_TIMEOUT_SEC);
+	bool b = serial_write(ser_fd, (const char*)buf, slip_len, SERIAL_TIMEOUT_SEC);
 
-	if (conf.loglevel >= LL_DEBUG) {
+	if (b && conf.loglevel >= LL_DEBUG) {
 		dump_data("TX: ", req, len);
 	}
 
-	return true;
+	return b;
 }
 
 const uint8_t* ser_read_decode(void)
@@ -155,6 +155,10 @@ bool ser_enter_dfu(void)
 	do {
 		if (conf.dfucmd) {
 			ret = serial_enter_dfu_cmd();
+			if (terminate) {
+				ret = false;
+				break;
+			}
 			sleep(1);
 			if (!ret) {
 				/* if dfu command failed, try ping, it will
@@ -172,7 +176,9 @@ bool ser_enter_dfu(void)
 			fflush(stdout);
 		}
 
-		ret = dfu_ping();
+		if (!terminate) {
+			ret = dfu_ping();
+		}
 	} while (!ret && ++ntry < conf.timeout && !terminate);
 
 	LOG_NL(LL_NOTICE);
@@ -186,5 +192,9 @@ bool ser_enter_dfu(void)
 
 void ser_fini(void)
 {
-	serial_fini(ser_fd);
+	terminate = true;
+	if (ser_fd > 0) {
+		serial_fini(ser_fd);
+		ser_fd = -1;
+	}
 }
