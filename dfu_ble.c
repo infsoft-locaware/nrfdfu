@@ -58,7 +58,8 @@ void ble_fini(void)
 #define DFU_DATA_UUID		 "8EC90002-F315-4F60-9FB8-838830DAEA50"
 #define DFU_BUTTONLESS_UUID	 "8EC90003-F315-4F60-9FB8-838830DAEA50"
 #define SERVICE_CHANGED_UUID "2A05"
-#define CONNECT_MAX_TRY		 3
+#define CONNECT_NORMAL_TRY	 3
+#define CONNECT_DFUTARG_TRY	 10
 
 static bool terminate = false;
 static bool buttonless_noti = false;
@@ -93,8 +94,30 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
 	}
 }
 
-static void disconnect_handler(void* user) {
+static void disconnect_handler(void* user)
+{
 	disconnect_noti = true;
+}
+
+static blz_dev* retry_connect(const char* address, enum BLE_ATYPE atype,
+							  int tries)
+{
+	blz_dev* dev = NULL;
+	int trynum = 0;
+
+	do {
+		if (trynum > 0) {
+			LOG_ERR("Retry connecting to %s", address);
+			sleep(5);
+		}
+		dev = blz_connect(ctx, address, atype);
+	} while (dev == NULL && ++trynum < tries && !terminate);
+
+	if (trynum >= tries) {
+		LOG_ERR("Gave up connecting to %s after %d tries", address, trynum);
+	}
+
+	return dev;
 }
 
 bool ble_enter_dfu(const char* interface, const char* address,
@@ -106,22 +129,9 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		return false;
 	}
 
-	int trynum = 0;
-	do {
-		LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
-		dev = blz_connect(ctx, address, atype);
-		if (dev == NULL && !terminate) {
-			LOG_ERR("Could not connect to %s", address);
-			sleep(5);
-		}
-	} while (dev == NULL && ++trynum < CONNECT_MAX_TRY && !terminate);
-
-	if (trynum >= CONNECT_MAX_TRY) {
-		LOG_ERR("Gave up connecting to %s", address);
-		return false;
-	}
-
-	if (terminate) {
+	LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
+	dev = retry_connect(address, atype, CONNECT_NORMAL_TRY);
+	if (dev == NULL) {
 		return false;
 	}
 
@@ -182,6 +192,7 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	 * unsubscribes notifications of bch) */
 	blz_disconnect(dev);
 	blz_serv_free(srv);
+	srv = NULL;
 
 	/* connect to DfuTarg: increase MAC address by one */
 	uint8_t* mac = blz_string_to_mac_s(address);
@@ -189,9 +200,8 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	const char* macs = blz_mac_to_string_s(mac);
 
 	LOG_NOTI("Connecting to DfuTarg (%s)...", macs);
-	dev = blz_connect(ctx, macs, atype);
+	dev = retry_connect(macs, atype, CONNECT_DFUTARG_TRY);
 	if (dev == NULL) {
-		LOG_ERR("Could not connect DfuTarg");
 		return false;
 	}
 
