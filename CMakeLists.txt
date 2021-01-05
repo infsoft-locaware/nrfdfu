@@ -12,10 +12,11 @@ find_package(ZLIB)
 if (BLE_SUPPORT)
 pkg_search_module(BLZ REQUIRED blzlib)
 add_definitions(-DBLE_SUPPORT)
+add_executable(dfu_ble.c)
 endif (BLE_SUPPORT)
 
 add_executable(nrfdfu main.c log.c util.c serialtty.c
-    dfu.c dfu_serial.c slip.c dfu_ble.c)
+    dfu.c dfu_serial.c slip.c)
 
 target_include_directories(nrfdfu PRIVATE . ${BLZLIB_INCLUDE_DIRS})
 target_link_libraries(nrfdfu ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES}

@@ -28,7 +28,9 @@
 
 #include "conf.h"
 #include "dfu.h"
+#ifdef BLE_SUPPORT
 #include "dfu_ble.h"
+#endif
 #include "dfu_serial.h"
 #include "log.h"
 #include "serialtty.h"
@@ -45,15 +47,18 @@ static struct option ser_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"timeout", required_argument, NULL, 't'},
 									  {NULL, 0, NULL, 0}};
 
+#ifdef BLE_SUPPORT
 static struct option ble_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"verbose", optional_argument, NULL, 'v'},
 									  {"addr", required_argument, NULL, 'a'},
 									  {"atype", optional_argument, NULL, 't'},
 									  {"intf", optional_argument, NULL, 'i'},
 									  {NULL, 0, NULL, 0}};
+#endif
 
 static void usage(void)
 {
+#ifdef BLE_SUPPORT
 	fprintf(stderr,
 			"Usage: nrfserdfu serial|ble [options] DFUPKG.zip\n"
 			"Nordic NRF DFU Upgrade with DFUPKG.zip\n"
@@ -72,6 +77,22 @@ static void usage(void)
 			"  -a, --addr <mac>\tBLE MAC address to connect to\n"
 			"  -t, --atype public|random\tBLE MAC address type (optional)\n"
 			"  -i, --intf <name>\tBT interface name (hci0)\n");
+#else
+  fprintf(stderr,
+      "Usage: nrfserdfu serial|ble [options] DFUPKG.zip\n"
+      "Nordic NRF DFU Upgrade with DFUPKG.zip\n"
+      "Options (all):\n"
+      "  -h, --help\t\tShow help\n"
+      "  -v, --verbose=<level>\tLog level 1 or 2 (-vv)\n"
+      "\n"
+      "Options (serial):\n"
+      "  -p, --port <tty>\tSerial port (/dev/ttyUSB0)\n"
+      "  -b, --baud <num>\tSerial baud rate (115200)\n"
+      "  -c, --cmd <text>\tCommand to enter DFU mode\n"
+      "  -C, --hexcmd <hex>\tCommand to enter DFU mode in HEX\n"
+      "  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
+      "\n");
+#endif
 }
 
 static void main_options(int argc, char* argv[])
@@ -81,7 +102,9 @@ static void main_options(int argc, char* argv[])
 	conf.serspeed = 115200;
 	conf.loglevel = LL_NOTICE;
 	conf.timeout = 10;
+#ifdef BLE_SUPPORT
 	conf.ble_atype = BAT_UNKNOWN;
+#endif
 	conf.interface = "hci0";
 	conf.dfucmd_hex = false;
 
@@ -109,8 +132,10 @@ static void main_options(int argc, char* argv[])
 	while (n >= 0) {
 		if (conf.dfu_type == DFU_SERIAL) {
 			n = getopt_long(argc, argv, "hv::p:b:c:C:t:", ser_options, NULL);
+#ifdef BLE_SUPPORT
 		} else {
 			n = getopt_long(argc, argv, "hv::a:t:i:", ble_options, NULL);
+#endif
 		}
 
 		if (n < 0)
@@ -143,17 +168,21 @@ static void main_options(int argc, char* argv[])
 		case 't':
 			if (conf.dfu_type == DFU_SERIAL) {
 				conf.timeout = atoi(optarg);
+#ifdef BLE_SUPPORT
 			} else {
 				if (strncasecmp(optarg, "pub", 3) == 0) {
 					conf.ble_atype = BAT_PUBLIC;
 				} else if (strncasecmp(optarg, "rand", 4) == 0) {
 					conf.ble_atype = BAT_RANDOM;
 				}
+#endif
 			}
 			break;
+#ifdef BLE_SUPPORT
 		case 'a':
 			conf.ble_addr = optarg;
 			break;
+#endif
 		case 'i':
 			conf.interface = optarg;
 			break;
@@ -244,8 +273,10 @@ static void signal_handler(__attribute__((unused)) int signo)
 {
 	if (conf.dfu_type == DFU_SERIAL) {
 		ser_fini();
+#ifdef BLE_SUPPORT
 	} else {
 		ble_fini();
+#endif
 	}
 }
 
@@ -269,12 +300,14 @@ int main(int argc, char* argv[])
 
 	if (conf.dfu_type == DFU_SERIAL) {
 		LOG_INF("Serial Port: %s (%d baud)", conf.serport, conf.serspeed);
+#ifdef BLE_SUPPORT
 	} else {
 		if (conf.ble_addr == NULL) {
 			LOG_ERR("Need BLE Target addr -a");
 			exit(EXIT_FAILURE);
 		}
 		LOG_INF("BLE Target: %s", conf.ble_addr);
+#endif
 	}
 	LOG_INF("DFU Package: %s", conf.zipfile);
 
@@ -303,12 +336,14 @@ int main(int argc, char* argv[])
 		if (!dfu_get_serial_mtu()) {
 			goto exit;
 		}
+#ifdef BLE_SUPPORT
 	} else {
 		if (!ble_enter_dfu(conf.interface, conf.ble_addr, conf.ble_atype)) {
 			goto exit;
 		}
 
 		dfu_set_mtu(244);
+#endif
 	}
 
 	LOG_NOTI("Starting DFU upgrade");
@@ -346,8 +381,10 @@ exit:
 	}
 	if (conf.dfu_type == DFU_SERIAL) {
 		ser_fini();
+#ifdef BLE_SUPPORT
 	} else {
 		ble_fini();
+#endif
 	}
 	return ret;
 }
