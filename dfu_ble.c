@@ -28,7 +28,8 @@
 
 #ifndef BLE_SUPPORT
 
-bool ble_enter_dfu(const char* address, enum BLE_ATYPE atype)
+bool ble_enter_dfu(const char* interface, const char* address,
+				   enum BLE_ATYPE atype)
 {
 	return false;
 }
