@@ -55,7 +55,11 @@ static struct option ble_options[] = {{"help", no_argument, NULL, 'h'},
 static void usage(void)
 {
 	fprintf(stderr,
-			"Usage: nrfserdfu serial|ble [options] DFUPKG.zip\n"
+#ifdef BLE_SUPPORT
+			"Usage: nrfdfu serial|ble [options] DFUPKG.zip\n"
+#else
+			"Usage: nrfdfu serial [options] DFUPKG.zip\n"
+#endif
 			"Nordic NRF DFU Upgrade with DFUPKG.zip\n"
 			"Options (all):\n"
 			"  -h, --help\t\tShow help\n"
@@ -67,11 +71,14 @@ static void usage(void)
 			"  -c, --cmd <text>\tCommand to enter DFU mode\n"
 			"  -C, --hexcmd <hex>\tCommand to enter DFU mode in HEX\n"
 			"  -t, --timeout <num>\tTimeout after <num> tries (60)\n"
+#ifdef BLE_SUPPORT
 			"\n"
 			"Options (BLE):\n"
 			"  -a, --addr <mac>\tBLE MAC address to connect to\n"
 			"  -t, --atype public|random\tBLE MAC address type (optional)\n"
-			"  -i, --intf <name>\tBT interface name (hci0)\n");
+			"  -i, --intf <name>\tBT interface name (hci0)\n"
+#endif
+	);
 }
 
 static void main_options(int argc, char* argv[])
