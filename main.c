@@ -228,7 +228,8 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 	}
 
 	if (json_object_object_get_ex(json, "manifest", &jobj)
-		&& json_object_object_get_ex(jobj, "application", &jobj2)) {
+		&& (json_object_object_get_ex(jobj, "application", &jobj2)
+		 || json_object_object_get_ex(jobj, "bootloader", &jobj2))) {
 		if (json_object_object_get_ex(jobj2, "dat_file", &jobj)) {
 			*dat = strdup(json_object_get_string(jobj));
 		}
