@@ -229,7 +229,7 @@ static int read_manifest(zip_t* zip, char** dat, char** bin)
 
 	if (json_object_object_get_ex(json, "manifest", &jobj)
 		&& (json_object_object_get_ex(jobj, "application", &jobj2)
-		 || json_object_object_get_ex(jobj, "bootloader", &jobj2))) {
+			|| json_object_object_get_ex(jobj, "bootloader", &jobj2))) {
 		if (json_object_object_get_ex(jobj2, "dat_file", &jobj)) {
 			*dat = strdup(json_object_get_string(jobj));
 		}
@@ -312,8 +312,15 @@ int main(int argc, char* argv[])
 			goto exit;
 		}
 	} else {
-		if (!ble_enter_dfu(conf.interface, conf.ble_addr, conf.ble_atype)) {
+		int e = ble_enter_dfu(conf.interface, conf.ble_addr, conf.ble_atype);
+		if (!e) {
 			goto exit;
+		}
+		if (e != 2) { /* device not already in bootloader */
+			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
+									  conf.ble_atype)) {
+				goto exit;
+			}
 		}
 
 		dfu_set_mtu(244);

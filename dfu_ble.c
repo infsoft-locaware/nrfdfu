@@ -121,8 +121,19 @@ static blz_dev* retry_connect(const char* address, enum BLE_ATYPE atype,
 	return dev;
 }
 
-bool ble_enter_dfu(const char* interface, const char* address,
-				   enum BLE_ATYPE atype)
+static bool start_cp_notify()
+{
+	bool b = blz_char_notify_start(cp, control_notify_handler, NULL);
+	if (!b) {
+		LOG_ERR("Could not start CP notification");
+		return false;
+	}
+	return true;
+}
+
+/** returns 0 on error, 1 on success and 2 when already in bootloader */
+int ble_enter_dfu(const char* interface, const char* address,
+				  enum BLE_ATYPE atype)
 {
 	ctx = blz_init(interface);
 	if (ctx == NULL) {
@@ -151,7 +162,12 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		dp = blz_get_char_from_uuid(srv, DFU_DATA_UUID);
 		cp = blz_get_char_from_uuid(srv, DFU_CONTROL_UUID);
 		if (dp != NULL && cp != NULL) {
-			goto dfutarg_found;
+			LOG_NOTI("Device already is in Bootloader");
+			if (!start_cp_notify()) {
+				return false;
+			} else {
+				return 2; /* already in bootloader */
+			}
 		} else {
 			return false;
 		}
@@ -194,7 +210,12 @@ bool ble_enter_dfu(const char* interface, const char* address,
 	blz_disconnect(dev);
 	blz_serv_free(srv);
 	srv = NULL;
+	return true;
+}
 
+bool ble_connect_dfu_targ(const char* interface, const char* address,
+						  enum BLE_ATYPE atype)
+{
 	/* connect to DfuTarg: increase MAC address by one */
 	uint8_t* mac = blz_string_to_mac_s(address);
 	mac[0]++;
@@ -220,15 +241,8 @@ bool ble_enter_dfu(const char* interface, const char* address,
 		return false;
 	}
 
-dfutarg_found:
-
 	LOG_NOTI("DFU characteristics found");
-	b = blz_char_notify_start(cp, control_notify_handler, NULL);
-	if (!b) {
-		LOG_ERR("Could not start CP notification");
-		return false;
-	}
-	return true;
+	return start_cp_notify();
 }
 
 bool ble_write_ctrl(uint8_t* req, size_t len)
