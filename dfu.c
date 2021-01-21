@@ -134,7 +134,7 @@ static const char* dfu_ext_err_str(nrf_dfu_ext_error_code_t res)
 			   "greater than or equal to the current version. "
 			   "For a bootloader, it must be greater than the "
 			   "current version. This requirement prevents "
-			   " downgrade attacks.";
+			   "downgrade attacks.";
 	case NRF_DFU_EXT_ERROR_HW_VERSION_FAILURE:
 		return "The hardware version of the device does not "
 			   "match the required hardware version for the "
@@ -188,9 +188,10 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(buf + 1);
 
 	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
-		LOG_ERR("Response Error %s", dfu_err_str(resp->result));
 		if (resp->result == NRF_DFU_RES_CODE_EXT_ERROR) {
-			LOG_ERR("ERR: '%s'", dfu_ext_err_str(resp->ext_err));
+			LOG_ERR("\nERROR: %s", dfu_ext_err_str(resp->ext_err));
+		} else {
+			LOG_ERR("\nERROR: %s", dfu_err_str(resp->result));
 		}
 		return NULL;
 	}
