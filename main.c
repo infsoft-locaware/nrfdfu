@@ -304,6 +304,10 @@ int main(int argc, char* argv[])
 		goto exit;
 	}
 
+	if (!dfu_bootloader_enter()) {
+		goto exit;
+	}
+
 	if (!dfu_upgrade(zf1, zs1, zf2, zs2)) {
 		goto exit;
 	}

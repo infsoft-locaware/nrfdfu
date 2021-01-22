@@ -525,7 +525,7 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 	return true;
 }
 
-bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2)
+bool dfu_bootloader_enter(void)
 {
 	if (conf.dfu_type == DFU_SERIAL) {
 		if (!ser_enter_dfu()) {
@@ -539,7 +539,12 @@ bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2)
 		if (!e) {
 			return false;
 		}
-		if (e != 2) { /* device not already in bootloader */
+
+		/* Normally the device entered the bootloader and is now available as
+		 * as DfuTarg with a MAC address + 1 and we need to connect to it.
+		 * In the special case that we we already connected to the bootloader
+		 * above, this is detected and ble_enter_dfu() returns 2. */
+		if (e != 2) {
 			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
 									  conf.ble_atype)) {
 				return false;
@@ -548,7 +553,11 @@ bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2)
 
 		dfu_set_mtu(244);
 	}
+	return true;
+}
 
+bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2)
+{
 	LOG_NOTI("Starting DFU upgrade");
 
 	if (!dfu_set_packet_receive_notification(0)) {
