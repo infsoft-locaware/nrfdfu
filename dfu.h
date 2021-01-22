@@ -21,19 +21,10 @@
 #define DFU_H
 
 #include <stdbool.h>
-#include <stdint.h>
+#include <stddef.h>
 #include <zip.h>
 
 bool dfu_ping(void);
-bool dfu_set_packet_receive_notification(uint16_t prn);
-bool dfu_get_serial_mtu(void);
-void dfu_set_mtu(uint16_t mtu);
-uint32_t dfu_get_crc(void);
-bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc);
-bool dfu_object_create(uint8_t type, uint32_t size);
-bool dfu_object_write(zip_file_t* zf, size_t size);
-bool dfu_object_execute(void);
-
-bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz);
+bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2);
 
 #endif

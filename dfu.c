@@ -233,7 +233,7 @@ bool dfu_ping(void)
 	return (resp->ping.id == ping_id - 1);
 }
 
-bool dfu_set_packet_receive_notification(uint16_t prn)
+static bool dfu_set_packet_receive_notification(uint16_t prn)
 {
 	LOG_INF_("Set packet receive notification %d: ", prn);
 	nrf_dfu_request_t req = {
@@ -256,7 +256,7 @@ bool dfu_set_packet_receive_notification(uint16_t prn)
 }
 
 /* serial only */
-bool dfu_get_serial_mtu(void)
+static bool dfu_get_serial_mtu(void)
 {
 	LOG_INF_("Get serial MTU: ");
 	nrf_dfu_request_t req = {
@@ -284,12 +284,12 @@ bool dfu_get_serial_mtu(void)
 	return true;
 }
 
-void dfu_set_mtu(uint16_t mtu)
+static void dfu_set_mtu(uint16_t mtu)
 {
 	dfu_mtu = mtu;
 }
 
-uint32_t dfu_get_crc(void)
+static uint32_t dfu_get_crc(void)
 {
 	LOG_INF_("Get CRC: ");
 	nrf_dfu_request_t req = {
@@ -311,7 +311,7 @@ uint32_t dfu_get_crc(void)
 	return le32toh(resp->crc.crc);
 }
 
-bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
+static bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
 {
 	LOG_INF_("Select object %d: ", type);
 	nrf_dfu_request_t req = {
@@ -336,7 +336,7 @@ bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
 	return true;
 }
 
-bool dfu_object_create(uint8_t type, uint32_t size)
+static bool dfu_object_create(uint8_t type, uint32_t size)
 {
 	LOG_INF_("Create object %d (size %u): ", type, size);
 	nrf_dfu_request_t req = {
@@ -359,7 +359,7 @@ bool dfu_object_create(uint8_t type, uint32_t size)
 	return true;
 }
 
-bool dfu_object_write(zip_file_t* zf, size_t size)
+static bool dfu_object_write(zip_file_t* zf, size_t size)
 {
 	uint8_t buf[dfu_mtu];
 	uint8_t* fbuf = buf;
@@ -413,7 +413,7 @@ bool dfu_object_write(zip_file_t* zf, size_t size)
 }
 
 /** this writes the object to flash */
-bool dfu_object_execute(void)
+static bool dfu_object_execute(void)
 {
 	LOG_INF_("Object Execute: ");
 	nrf_dfu_request_t req = {
@@ -460,7 +460,7 @@ static uint32_t zip_crc_move(zip_file_t* zf, size_t size)
 	return crc;
 }
 
-bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
+static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 {
 	uint32_t offset;
 	uint32_t crc;
@@ -522,5 +522,51 @@ bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 			return false;
 	}
 
+	return true;
+}
+
+bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2)
+{
+	if (conf.dfu_type == DFU_SERIAL) {
+		if (!ser_enter_dfu()) {
+			return false;
+		}
+		if (!dfu_get_serial_mtu()) {
+			return false;
+		}
+	} else {
+		int e = ble_enter_dfu(conf.interface, conf.ble_addr, conf.ble_atype);
+		if (!e) {
+			return false;
+		}
+		if (e != 2) { /* device not already in bootloader */
+			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
+									  conf.ble_atype)) {
+				return false;
+			}
+		}
+
+		dfu_set_mtu(244);
+	}
+
+	LOG_NOTI("Starting DFU upgrade");
+
+	if (!dfu_set_packet_receive_notification(0)) {
+		return false;
+	}
+
+	LOG_NOTI_("Sending Init: ");
+	if (!dfu_object_write_procedure(1, zf1, zs1)) {
+		return false;
+	}
+	LOG_NL(LL_NOTICE);
+
+	LOG_NOTI_("Sending Firmware: ");
+	if (!dfu_object_write_procedure(2, zf2, zs2)) {
+		return false;
+	}
+
+	LOG_NL(LL_NOTICE);
+	LOG_NOTI("Done");
 	return true;
 }

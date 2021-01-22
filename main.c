@@ -304,46 +304,9 @@ int main(int argc, char* argv[])
 		goto exit;
 	}
 
-	if (conf.dfu_type == DFU_SERIAL) {
-		if (!ser_enter_dfu()) {
-			goto exit;
-		}
-		if (!dfu_get_serial_mtu()) {
-			goto exit;
-		}
-	} else {
-		int e = ble_enter_dfu(conf.interface, conf.ble_addr, conf.ble_atype);
-		if (!e) {
-			goto exit;
-		}
-		if (e != 2) { /* device not already in bootloader */
-			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
-									  conf.ble_atype)) {
-				goto exit;
-			}
-		}
-
-		dfu_set_mtu(244);
-	}
-
-	LOG_NOTI("Starting DFU upgrade");
-
-	if (!dfu_set_packet_receive_notification(0)) {
+	if (!dfu_upgrade(zf1, zs1, zf2, zs2)) {
 		goto exit;
 	}
-
-	LOG_NOTI_("Sending Init: ");
-	if (!dfu_object_write_procedure(1, zf1, zs1)) {
-		goto exit;
-	}
-	LOG_NL(LL_NOTICE);
-
-	LOG_NOTI_("Sending Firmware: ");
-	if (!dfu_object_write_procedure(2, zf2, zs2)) {
-		goto exit;
-	}
-	LOG_NL(LL_NOTICE);
-	LOG_NOTI("Done");
 
 	ret = EXIT_SUCCESS;
 
