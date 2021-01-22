@@ -274,6 +274,18 @@ const uint8_t* ble_read(void)
 	return recv_buf;
 }
 
+void ble_disconnect(void)
+{
+	LOG_NOTI("Disconnecting");
+
+	if (cp) {
+		blz_char_notify_stop(cp);
+	}
+	if (dev) {
+		blz_disconnect(dev);
+	}
+}
+
 void ble_fini(void)
 {
 	if (dev) {

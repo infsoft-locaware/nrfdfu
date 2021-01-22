@@ -198,54 +198,76 @@ static zip_file_t* zip_file_open(zip_t* zip, const char* name, size_t* size)
 	return zf;
 }
 
-/* dat and bin have to be freed by caller */
-static int read_manifest(zip_t* zip, char** dat, char** bin)
+/* ap_dat and ap_bin have to be freed by caller */
+static bool read_manifest(zip_t* zip, char** ap_dat, char** ap_bin,
+						  char** sb_dat, char** sb_bin)
 {
-	char buf[400];
+	bool ret = false;
+	char buf[600];
+	json_object* json;
+	json_object* jobj;
+	json_object* jobj2;
+	json_object* jobj3;
+	enum json_tokener_error json_err;
 
 	zip_file_t* zf = zip_fopen(zip, "manifest.json", 0);
 	if (zf == NULL) {
 		LOG_ERR("ZIP file does not contain manifest");
-		return -1;
+		return false;
 	}
 
 	zip_int64_t len = zip_fread(zf, buf, sizeof(buf));
 	if (len <= 0) {
 		LOG_ERR("Could not read Manifest");
-		return -1;
+		goto exit;
 	}
 
 	/* read JSON */
-	json_object* json;
-	json_object* jobj;
-	json_object* jobj2;
-	enum json_tokener_error json_err;
+
 	json = json_tokener_parse_verbose(buf, &json_err);
 	if (json == NULL) {
 		LOG_ERR("Manifest not valid JSON %d", json_err);
-		zip_fclose(zf);
-		return -1;
+		goto exit;
 	}
 
-	if (json_object_object_get_ex(json, "manifest", &jobj)
-		&& (json_object_object_get_ex(jobj, "application", &jobj2)
-			|| json_object_object_get_ex(jobj, "bootloader", &jobj2))) {
-		if (json_object_object_get_ex(jobj2, "dat_file", &jobj)) {
-			*dat = strdup(json_object_get_string(jobj));
+	if (!json_object_object_get_ex(json, "manifest", &jobj)) {
+		LOG_ERR("Manifest format unknown");
+		goto exit;
+	}
+
+	if (json_object_object_get_ex(jobj, "application", &jobj2)) {
+		if (json_object_object_get_ex(jobj2, "dat_file", &jobj3)) {
+			*ap_dat = strdup(json_object_get_string(jobj3));
 		}
-		if (json_object_object_get_ex(jobj2, "bin_file", &jobj)) {
-			*bin = strdup(json_object_get_string(jobj));
+		if (json_object_object_get_ex(jobj2, "bin_file", &jobj3)) {
+			*ap_bin = strdup(json_object_get_string(jobj3));
+		}
+		if (!*ap_dat || !*ap_bin) {
+			LOG_ERR("Manifest missing app files");
+			goto exit;
 		}
 	}
+
+	if ((json_object_object_get_ex(jobj, "softdevice_bootloader", &jobj2)
+		 || json_object_object_get_ex(jobj, "bootloader", &jobj2))) {
+		if (json_object_object_get_ex(jobj2, "dat_file", &jobj3)) {
+			*sb_dat = strdup(json_object_get_string(jobj3));
+		}
+		if (json_object_object_get_ex(jobj2, "bin_file", &jobj3)) {
+			*sb_bin = strdup(json_object_get_string(jobj3));
+		}
+		if (!*sb_dat || !*sb_bin) {
+			LOG_ERR("Manifest missing softdevice/bootloader files");
+			goto exit;
+		}
+	}
+
+	ret = true;
+
+exit:
 	json_object_put(json);
 	zip_fclose(zf);
-
-	if (!*dat || !*bin) {
-		LOG_ERR("Manifest format unknown");
-		return -1;
-	}
-
-	return 0;
+	return ret;
 }
 
 static void signal_handler(__attribute__((unused)) int signo)
@@ -260,11 +282,15 @@ static void signal_handler(__attribute__((unused)) int signo)
 int main(int argc, char* argv[])
 {
 	int ret = EXIT_FAILURE;
-	char* dat = NULL;
-	char* bin = NULL;
-	zip_file_t* zf1 = NULL;
-	zip_file_t* zf2 = NULL;
-	size_t zs1, zs2;
+	char* ap_dat = NULL;
+	char* ap_bin = NULL;
+	char* sb_dat = NULL;
+	char* sb_bin = NULL;
+	zip_file_t* zf_ap_dat = NULL;
+	zip_file_t* zf_ap_bin = NULL;
+	zip_file_t* zf_sb_dat = NULL;
+	zip_file_t* zf_sb_bin = NULL;
+	size_t zs_ap_dat, zs_ap_bin, zs_sb_dat, zs_sb_bin;
 
 	main_options(argc, argv);
 
@@ -292,36 +318,76 @@ int main(int argc, char* argv[])
 		goto exit;
 	}
 
-	int man = read_manifest(zip, &dat, &bin);
-	if (man < 0 || !dat || !bin) {
+	if (!read_manifest(zip, &ap_dat, &ap_bin, &sb_dat, &sb_bin)) {
 		goto exit;
 	}
 
-	/* open data files in ZIP file */
-	zf1 = zip_file_open(zip, dat, &zs1);
-	zf2 = zip_file_open(zip, bin, &zs2);
-	if (zf1 == NULL || zf2 == NULL) {
-		goto exit;
+	/* open all data files in ZIP file before starting */
+	if (ap_dat && ap_bin) {
+		zf_ap_dat = zip_file_open(zip, ap_dat, &zs_ap_dat);
+		zf_ap_bin = zip_file_open(zip, ap_bin, &zs_ap_bin);
+		if (zf_ap_dat == NULL || zf_ap_bin == NULL) {
+			LOG_ERR("Cannot open APP files in ZIP");
+			goto exit;
+		}
+	}
+	if (sb_dat && sb_bin) {
+		zf_sb_dat = zip_file_open(zip, sb_dat, &zs_sb_dat);
+		zf_sb_bin = zip_file_open(zip, sb_bin, &zs_sb_bin);
+		if (zf_sb_dat == NULL || zf_sb_bin == NULL) {
+			LOG_ERR("Cannot open SD files in ZIP");
+			goto exit;
+		}
 	}
 
 	if (!dfu_bootloader_enter()) {
 		goto exit;
 	}
 
-	if (!dfu_upgrade(zf1, zs1, zf2, zs2)) {
-		goto exit;
+	if (sb_dat) {
+		LOG_NOTI("Updating SoftDevice/Bootloader:");
+		if (!dfu_upgrade(zf_sb_dat, zs_sb_dat, zf_sb_bin, zs_sb_bin)) {
+			goto exit;
+		}
+	}
+
+	if (conf.dfu_type == DFU_BLE && sb_dat && ap_dat) {
+		ble_disconnect();
+		if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
+								  conf.ble_atype)) {
+			/* if that fails, it may be that the APP is already running,
+			 * try to connect normally */
+			if (!dfu_bootloader_enter()) {
+				goto exit;
+			}
+		}
+	}
+
+	if (ap_dat) {
+		LOG_NOTI("Updating Application:");
+		if (!dfu_upgrade(zf_ap_dat, zs_ap_dat, zf_ap_bin, zs_ap_bin)) {
+			goto exit;
+		}
 	}
 
 	ret = EXIT_SUCCESS;
 
 exit:
-	free(bin);
-	free(dat);
-	if (zf1) {
-		zip_fclose(zf1);
+	free(ap_bin);
+	free(ap_dat);
+	free(sb_bin);
+	free(sb_dat);
+	if (zf_ap_dat) {
+		zip_fclose(zf_ap_dat);
 	}
-	if (zf2) {
-		zip_fclose(zf2);
+	if (zf_ap_bin) {
+		zip_fclose(zf_ap_bin);
+	}
+	if (zf_sb_dat) {
+		zip_fclose(zf_sb_dat);
+	}
+	if (zf_sb_bin) {
+		zip_fclose(zf_sb_bin);
 	}
 	if (zip) {
 		zip_close(zip);

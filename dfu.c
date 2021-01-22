@@ -556,22 +556,21 @@ bool dfu_bootloader_enter(void)
 	return true;
 }
 
-bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2)
+bool dfu_upgrade(zip_file_t* init_zip, size_t init_size, zip_file_t* fw_zip,
+				 size_t fw_size)
 {
-	LOG_NOTI("Starting DFU upgrade");
-
 	if (!dfu_set_packet_receive_notification(0)) {
 		return false;
 	}
 
 	LOG_NOTI_("Sending Init: ");
-	if (!dfu_object_write_procedure(1, zf1, zs1)) {
+	if (!dfu_object_write_procedure(1, init_zip, init_size)) {
 		return false;
 	}
 	LOG_NL(LL_NOTICE);
 
 	LOG_NOTI_("Sending Firmware: ");
-	if (!dfu_object_write_procedure(2, zf2, zs2)) {
+	if (!dfu_object_write_procedure(2, fw_zip, fw_size)) {
 		return false;
 	}
 

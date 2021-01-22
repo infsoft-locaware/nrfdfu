@@ -26,6 +26,7 @@
 
 bool dfu_ping(void);
 bool dfu_bootloader_enter(void);
-bool dfu_upgrade(zip_file_t* zf1, size_t zs1, zip_file_t* zf2, size_t zs2);
+bool dfu_upgrade(zip_file_t* init_zip, size_t init_size, zip_file_t* fw_zip,
+				 size_t fw_size);
 
 #endif
