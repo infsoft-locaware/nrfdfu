@@ -1,6 +1,6 @@
 # nrfdfu - Nordic Serial DFU #
 
-This is a C Implementation of Nordics DFU protocol over Serial and BLE, targeted for embedded systems where running Python-based `nrfutil` is too heavy-weight.
+This is a C implementation of Nordics DFU protocol over Serial and BLE, targeted for embedded systems where running Python-based `nrfutil` is too heavy-weight.
 
 
 ## Dependencies ##
@@ -55,7 +55,7 @@ library dependencies:
 
 ## Usage ##
 ```
-Usage: nrfserdfu serial|ble [options] DFUPKG.zip
+Usage: nrfdfu serial|ble [options] DFUPKG.zip
 Nordic NRF DFU Upgrade with DFUPKG.zip
 Options (all):
   -h, --help            Show help
@@ -63,7 +63,9 @@ Options (all):
 
 Options (serial):
   -p, --port <tty>      Serial port (/dev/ttyUSB0)
+  -b, --baud <num>      Serial baud rate (115200)
   -c, --cmd <text>      Command to enter DFU mode
+  -C, --hexcmd <hex>    Command to enter DFU mode in HEX
   -t, --timeout <num>   Timeout after <num> tries (60)
 
 Options (BLE):
@@ -78,9 +80,9 @@ Example:
 
 This is like typing "dfu" on the serial console (this is optional if the device is already in DFU mode) and then the Nordic DFU Upgrade is started over the same serial port.
 
-    ./build/nrfdfu ble -a 00:11:22:33:44:55 ~/dfu-update.zip
+    ./build/nrfdfu ble -a 00:11:22:33:44:55 -t random ~/dfu-update.zip
 
-Connect to BLE Device 00:11:22:33:44:55 and start DFU Upgrade procedure.
+Connect to BLE Device with random address 00:11:22:33:44:55 and start DFU Upgrade procedure.
 
 Use -v or -vv for a more verbose output.
 
