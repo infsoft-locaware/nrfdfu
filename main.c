@@ -204,7 +204,7 @@ static bool read_manifest(zip_t* zip, char** ap_dat, char** ap_bin,
 {
 	bool ret = false;
 	char buf[600];
-	json_object* json;
+	json_object* json = NULL;
 	json_object* jobj;
 	json_object* jobj2;
 	json_object* jobj3;
@@ -266,6 +266,7 @@ static bool read_manifest(zip_t* zip, char** ap_dat, char** ap_bin,
 
 exit:
 	json_object_put(json);
+	// no need to json_object_put() the other jobs2/3
 	zip_fclose(zf);
 	return ret;
 }
