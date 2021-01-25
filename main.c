@@ -323,14 +323,6 @@ int main(int argc, char* argv[])
 	}
 
 	/* open all data files in ZIP file before starting */
-	if (ap_dat && ap_bin) {
-		zf_ap_dat = zip_file_open(zip, ap_dat, &zs_ap_dat);
-		zf_ap_bin = zip_file_open(zip, ap_bin, &zs_ap_bin);
-		if (zf_ap_dat == NULL || zf_ap_bin == NULL) {
-			LOG_ERR("Cannot open APP files in ZIP");
-			goto exit;
-		}
-	}
 	if (sb_dat && sb_bin) {
 		zf_sb_dat = zip_file_open(zip, sb_dat, &zs_sb_dat);
 		zf_sb_bin = zip_file_open(zip, sb_bin, &zs_sb_bin);
@@ -338,6 +330,16 @@ int main(int argc, char* argv[])
 			LOG_ERR("Cannot open SD files in ZIP");
 			goto exit;
 		}
+		LOG_INF("Update contains Softdevice/Bootloader with size %zd", zs_sb_bin);
+	}
+	if (ap_dat && ap_bin) {
+		zf_ap_dat = zip_file_open(zip, ap_dat, &zs_ap_dat);
+		zf_ap_bin = zip_file_open(zip, ap_bin, &zs_ap_bin);
+		if (zf_ap_dat == NULL || zf_ap_bin == NULL) {
+			LOG_ERR("Cannot open APP files in ZIP");
+			goto exit;
+		}
+		LOG_INF("Update contains Application with size %zd", zs_ap_bin);
 	}
 
 	if (!dfu_bootloader_enter()) {
