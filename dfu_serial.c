@@ -33,7 +33,7 @@
 
 #define DFU_SERIAL_BAUDRATE 115200
 #define MAX_READ_TRIES		SLIP_BUF_SIZE
-#define SERIAL_TIMEOUT_SEC	1
+#define SERIAL_TIMEOUT_SEC	5
 
 static uint8_t buf[SLIP_BUF_SIZE];
 static int ser_fd = -1;

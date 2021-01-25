@@ -330,7 +330,8 @@ int main(int argc, char* argv[])
 			LOG_ERR("Cannot open SD files in ZIP");
 			goto exit;
 		}
-		LOG_INF("Update contains Softdevice/Bootloader with size %zd", zs_sb_bin);
+		LOG_INF("Update contains Softdevice/Bootloader with size %zd",
+				zs_sb_bin);
 	}
 	if (ap_dat && ap_bin) {
 		zf_ap_dat = zip_file_open(zip, ap_dat, &zs_ap_dat);
@@ -353,14 +354,25 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	if (conf.dfu_type == DFU_BLE && sb_dat && ap_dat) {
-		ble_disconnect();
-		if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
-								  conf.ble_atype)) {
-			/* if that fails, it may be that the APP is already running,
-			 * try to connect normally */
-			if (!dfu_bootloader_enter()) {
-				goto exit;
+	if (sb_dat && ap_dat) {
+		if (conf.dfu_type == DFU_BLE) {
+			ble_disconnect();
+			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
+									  conf.ble_atype)) {
+				/* if that fails, it may be that the APP is already running,
+				 * try to connect normally */
+				if (!dfu_bootloader_enter()) {
+					goto exit;
+				}
+			}
+		} else {
+			/* Serial: Sleep a bit and then try to ping */
+			sleep(5);
+			bool p = false;
+			int cnt = 0;
+			while (!p && cnt < 3) {
+				p = dfu_ping();
+				cnt++;
 			}
 		}
 	}
