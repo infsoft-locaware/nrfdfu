@@ -330,8 +330,7 @@ int main(int argc, char* argv[])
 			LOG_ERR("Cannot open SD files in ZIP");
 			goto exit;
 		}
-		LOG_INF("Update contains Softdevice/Bootloader with size %zd",
-				zs_sb_bin);
+		LOG_INF("Update contains Softdevice/Bootloader");
 	}
 	if (ap_dat && ap_bin) {
 		zf_ap_dat = zip_file_open(zip, ap_dat, &zs_ap_dat);
@@ -340,7 +339,13 @@ int main(int argc, char* argv[])
 			LOG_ERR("Cannot open APP files in ZIP");
 			goto exit;
 		}
-		LOG_INF("Update contains Application with size %zd", zs_ap_bin);
+		LOG_INF("Update contains Application");
+	}
+
+	if (sb_dat) {
+		LOG_NOTI("Updating SoftDevice/Bootloader (%zd bytes):", zs_sb_bin);
+	} else {
+		LOG_NOTI("Updating Application (%zd bytes):", zs_ap_bin);
 	}
 
 	if (!dfu_bootloader_enter()) {
@@ -348,13 +353,13 @@ int main(int argc, char* argv[])
 	}
 
 	if (sb_dat) {
-		LOG_NOTI("Updating SoftDevice/Bootloader:");
 		if (!dfu_upgrade(zf_sb_dat, zs_sb_dat, zf_sb_bin, zs_sb_bin)) {
 			goto exit;
 		}
 	}
 
 	if (sb_dat && ap_dat) {
+		LOG_NOTI("Updating Application (%zd bytes):", zs_ap_bin);
 		if (conf.dfu_type == DFU_BLE) {
 			ble_disconnect();
 			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
@@ -378,7 +383,6 @@ int main(int argc, char* argv[])
 	}
 
 	if (ap_dat) {
-		LOG_NOTI("Updating Application:");
 		if (!dfu_upgrade(zf_ap_dat, zs_ap_dat, zf_ap_bin, zs_ap_bin)) {
 			goto exit;
 		}

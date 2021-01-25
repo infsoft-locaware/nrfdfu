@@ -570,7 +570,7 @@ bool dfu_upgrade(zip_file_t* init_zip, size_t init_size, zip_file_t* fw_zip,
 	}
 	LOG_NL(LL_NOTICE);
 
-	LOG_NOTI_("Sending Firmware: ");
+	LOG_NOTI_("Sending Data: ");
 	if (!dfu_object_write_procedure(2, fw_zip, fw_size)) {
 		return false;
 	}
