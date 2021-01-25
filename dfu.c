@@ -197,7 +197,8 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 	}
 
 	if (resp->request != request) {
-		LOG_ERR("Response does not match request");
+		LOG_ERR("Response does not match request (0x%x vs 0x%x)", resp->request,
+				request);
 		return NULL;
 	}
 
