@@ -33,19 +33,17 @@
 
 #define DFU_SERIAL_BAUDRATE 115200
 #define MAX_READ_TRIES		SLIP_BUF_SIZE
-#define SERIAL_TIMEOUT_SEC	5
 
 static uint8_t buf[SLIP_BUF_SIZE];
 static int ser_fd = -1;
 static bool terminate;
 
-bool ser_encode_write(uint8_t* req, size_t len)
+bool ser_encode_write(uint8_t* req, size_t len, int timeout_sec)
 {
 	uint32_t slip_len;
 	slip_encode(buf, (uint8_t*)req, len, &slip_len);
 
-	bool b
-		= serial_write(ser_fd, (const char*)buf, slip_len, SERIAL_TIMEOUT_SEC);
+	bool b = serial_write(ser_fd, (const char*)buf, slip_len, timeout_sec);
 
 	if (b && conf.loglevel >= LL_DEBUG) {
 		dump_data("TX: ", req, len);
@@ -54,7 +52,7 @@ bool ser_encode_write(uint8_t* req, size_t len)
 	return b;
 }
 
-const uint8_t* ser_read_decode(void)
+const uint8_t* ser_read_decode(int timeout_sec)
 {
 	ssize_t ret;
 	int end = 0;
@@ -69,7 +67,7 @@ const uint8_t* ser_read_decode(void)
 
 	do {
 		read_tries++;
-		timeout = serial_wait_read_ready(ser_fd, SERIAL_TIMEOUT_SEC);
+		timeout = serial_wait_read_ready(ser_fd, timeout_sec);
 		if (timeout) {
 			LOG_INF("Timeout on Serial RX");
 			break;

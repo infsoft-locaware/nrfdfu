@@ -29,8 +29,8 @@
 #define SLIP_BUF_SIZE (BUF_SIZE * 2 + 1)
 
 bool ser_enter_dfu(void);
-bool ser_encode_write(uint8_t* req, size_t len);
-const uint8_t* ser_read_decode(void);
+bool ser_encode_write(uint8_t* req, size_t len, int timeout_sec);
+const uint8_t* ser_read_decode(int timeout_sec);
 void ser_fini(void);
 
 #endif

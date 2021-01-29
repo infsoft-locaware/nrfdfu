@@ -30,6 +30,10 @@
 #include "nrf_dfu_req_handler.h"
 #include "util.h"
 
+/* Timeout on Serial in seconds */
+#define SER_TIMEOUT_DEFAULT 1
+#define SER_TIMEOUT_OBJ_EXE 10
+
 static uint16_t dfu_mtu;
 static uint32_t dfu_max_size;
 static uint32_t dfu_current_crc;
@@ -72,7 +76,7 @@ static bool send_request(nrf_dfu_request_t* req)
 	}
 
 	if (conf.dfu_type == DFU_SERIAL) {
-		return ser_encode_write((uint8_t*)req, size);
+		return ser_encode_write((uint8_t*)req, size, SER_TIMEOUT_DEFAULT);
 	} else {
 		return ble_write_ctrl((uint8_t*)req, size);
 	}
@@ -170,7 +174,10 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 {
 	const uint8_t* buf = NULL;
 	if (conf.dfu_type == DFU_SERIAL) {
-		buf = ser_read_decode();
+		/* object execute needs more time when updating bootloader/SD */
+		buf = ser_read_decode(request == NRF_DFU_OP_OBJECT_EXECUTE
+								  ? SER_TIMEOUT_OBJ_EXE
+								  : SER_TIMEOUT_DEFAULT);
 	} else {
 		buf = ble_read();
 	}
@@ -384,7 +391,7 @@ static bool dfu_object_write(zip_file_t* zf, size_t size)
 		}
 		bool b;
 		if (conf.dfu_type == DFU_SERIAL) {
-			b = ser_encode_write(buf, len + 1);
+			b = ser_encode_write(buf, len + 1, SER_TIMEOUT_DEFAULT);
 		} else {
 			b = ble_write_data(fbuf, len);
 		}
