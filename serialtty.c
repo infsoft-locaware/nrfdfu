@@ -54,7 +54,6 @@ static void serial_set_tty_speed(int baud)
 		default:		LOG_ERR("Unknown baudrate %d", baud);
 	}
 	// clang-format on
-
 }
 int serial_init(const char* dev, int baud)
 {
