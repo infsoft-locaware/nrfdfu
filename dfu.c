@@ -215,8 +215,7 @@ bool dfu_ping(void)
 		.ping.id = ping_id++,
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return false;
 	}
 
@@ -242,8 +241,7 @@ static bool dfu_set_packet_receive_notification(uint16_t prn)
 		.prn.target = htole16(prn),
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return false;
 	}
 
@@ -264,8 +262,7 @@ static bool dfu_get_serial_mtu(void)
 		.request = NRF_DFU_OP_MTU_GET,
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return false;
 	}
 
@@ -297,8 +294,7 @@ static uint32_t dfu_get_crc(void)
 		.request = NRF_DFU_OP_CRC_GET,
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return 0;
 	}
 
@@ -320,8 +316,7 @@ static bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
 		.select.object_type = type,
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return false;
 	}
 
@@ -346,8 +341,7 @@ static bool dfu_object_create(uint8_t type, uint32_t size)
 		.create.object_size = htole32(size),
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return false;
 	}
 
@@ -421,8 +415,7 @@ static bool dfu_object_execute(void)
 		.request = NRF_DFU_OP_OBJECT_EXECUTE,
 	};
 
-	bool b = send_request(&req);
-	if (!b) {
+	if (!send_request(&req)) {
 		return false;
 	}
 
@@ -466,8 +459,9 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 	uint32_t offset;
 	uint32_t crc;
 
-	if (!dfu_object_select(type, &offset, &crc))
+	if (!dfu_object_select(type, &offset, &crc)) {
 		return false;
+	}
 
 	/* object with same length and CRC already received */
 	if (offset == sz && zip_crc_move(zf, sz) == crc) {
@@ -494,11 +488,13 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 			/* transfer remaining data if necessary */
 			if (remain > 0) {
 				size_t end = offset + dfu_max_size - remain;
-				if (!dfu_object_write(zf, end))
+				if (!dfu_object_write(zf, end)) {
 					return false;
+				}
 			}
-			if (!dfu_object_execute())
+			if (!dfu_object_execute()) {
 				return false;
+			}
 		}
 	} else if (offset == 0) {
 		dfu_current_crc = crc32(0L, Z_NULL, 0);
@@ -507,11 +503,13 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 	/* create and write objects of max_size */
 	for (int i = offset; i < sz; i += dfu_max_size) {
 		size_t osz = MIN(sz - i, dfu_max_size);
-		if (!dfu_object_create(type, osz))
+		if (!dfu_object_create(type, osz)) {
 			return false;
+		}
 
-		if (!dfu_object_write(zf, osz))
+		if (!dfu_object_write(zf, osz)) {
 			return false;
+		}
 
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != dfu_current_crc) {
@@ -519,8 +517,9 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 			return false;
 		}
 
-		if (!dfu_object_execute())
+		if (!dfu_object_execute()) {
 			return false;
+		}
 	}
 
 	return true;
