@@ -24,9 +24,11 @@
 #include <stddef.h>
 #include <zip.h>
 
+enum dfu_ret { DFU_RET_SUCCESS, DFU_RET_ERROR, DFU_RET_FW_VERSION };
+
 bool dfu_ping(void);
 bool dfu_bootloader_enter(void);
-bool dfu_upgrade(zip_file_t* init_zip, size_t init_size, zip_file_t* fw_zip,
-				 size_t fw_size);
+enum dfu_ret dfu_upgrade(zip_file_t* init_zip, size_t init_size,
+						 zip_file_t* fw_zip, size_t fw_size);
 
 #endif

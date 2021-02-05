@@ -422,8 +422,9 @@ static bool dfu_object_write(zip_file_t* zf, size_t size)
 	return true;
 }
 
-/** this writes the object to flash */
-static bool dfu_object_execute(void)
+/** this writes the object to flash
+ * return: failed, success, fw_version too low */
+static enum dfu_ret dfu_object_execute(void)
 {
 	LOG_INF_("Object Execute: ");
 	nrf_dfu_request_t req = {
@@ -431,16 +432,21 @@ static bool dfu_object_execute(void)
 	};
 
 	if (!send_request(&req)) {
-		return false;
+		return DFU_RET_ERROR;
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
 	if (response_is_error(resp)) {
-		return false;
+		if (resp && resp->result == NRF_DFU_RES_CODE_EXT_ERROR
+			&& resp->ext_err == NRF_DFU_EXT_ERROR_FW_VERSION_FAILURE) {
+			return DFU_RET_FW_VERSION;
+		} else {
+			return DFU_RET_ERROR;
+		}
 	}
 
 	LOG_INF("OK");
-	return true;
+	return DFU_RET_SUCCESS;
 }
 
 /* get CRC of contents of ZIP file until size */
@@ -469,13 +475,16 @@ static uint32_t zip_crc_move(zip_file_t* zf, size_t size)
 	return crc;
 }
 
-static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
+/** return: failed, success, fw_version too low */
+static enum dfu_ret dfu_object_write_procedure(uint8_t type, zip_file_t* zf,
+											   size_t sz)
 {
 	uint32_t offset;
 	uint32_t crc;
+	enum dfu_ret ret;
 
 	if (!dfu_object_select(type, &offset, &crc)) {
-		return false;
+		return DFU_RET_ERROR;
 	}
 
 	/* object with same length and CRC already received */
@@ -504,11 +513,12 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 			if (remain > 0) {
 				size_t end = offset + dfu_max_size - remain;
 				if (!dfu_object_write(zf, end)) {
-					return false;
+					return DFU_RET_ERROR;
 				}
 			}
-			if (!dfu_object_execute()) {
-				return false;
+			ret = dfu_object_execute();
+			if (ret != DFU_RET_SUCCESS) {
+				return ret;
 			}
 		}
 	} else if (offset == 0) {
@@ -519,25 +529,26 @@ static bool dfu_object_write_procedure(uint8_t type, zip_file_t* zf, size_t sz)
 	for (int i = offset; i < sz; i += dfu_max_size) {
 		size_t osz = MIN(sz - i, dfu_max_size);
 		if (!dfu_object_create(type, osz)) {
-			return false;
+			return DFU_RET_ERROR;
 		}
 
 		if (!dfu_object_write(zf, osz)) {
-			return false;
+			return DFU_RET_ERROR;
 		}
 
 		uint32_t rcrc = dfu_get_crc();
 		if (rcrc != dfu_current_crc) {
 			LOG_ERR("CRC failed 0x%X vs 0x%X", rcrc, dfu_current_crc);
-			return false;
+			return DFU_RET_ERROR;
 		}
 
-		if (!dfu_object_execute()) {
-			return false;
+		ret = dfu_object_execute();
+		if (ret != DFU_RET_SUCCESS) {
+			return ret;
 		}
 	}
 
-	return true;
+	return DFU_RET_SUCCESS;
 }
 
 bool dfu_bootloader_enter(void)
@@ -571,25 +582,28 @@ bool dfu_bootloader_enter(void)
 	return true;
 }
 
-bool dfu_upgrade(zip_file_t* init_zip, size_t init_size, zip_file_t* fw_zip,
-				 size_t fw_size)
+/** return: failed, success, fw_version too low */
+enum dfu_ret dfu_upgrade(zip_file_t* init_zip, size_t init_size,
+						 zip_file_t* fw_zip, size_t fw_size)
 {
 	if (!dfu_set_packet_receive_notification(0)) {
-		return false;
+		return DFU_RET_ERROR;
 	}
 
 	LOG_NOTI_("Sending Init: ");
-	if (!dfu_object_write_procedure(1, init_zip, init_size)) {
-		return false;
+	enum dfu_ret ret = dfu_object_write_procedure(1, init_zip, init_size);
+	if (ret != DFU_RET_SUCCESS) {
+		return ret;
 	}
 	LOG_NL(LL_NOTICE);
 
 	LOG_NOTI_("Sending Data: ");
-	if (!dfu_object_write_procedure(2, fw_zip, fw_size)) {
-		return false;
+	ret = dfu_object_write_procedure(2, fw_zip, fw_size);
+	if (ret != DFU_RET_SUCCESS) {
+		return ret;
 	}
 
 	LOG_NL(LL_NOTICE);
 	LOG_NOTI("Done");
-	return true;
+	return DFU_RET_SUCCESS;
 }

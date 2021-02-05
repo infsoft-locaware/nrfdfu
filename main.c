@@ -292,6 +292,7 @@ int main(int argc, char* argv[])
 	zip_file_t* zf_sb_dat = NULL;
 	zip_file_t* zf_sb_bin = NULL;
 	size_t zs_ap_dat, zs_ap_bin, zs_sb_dat, zs_sb_bin;
+	enum dfu_ret r;
 
 	main_options(argc, argv);
 
@@ -354,8 +355,17 @@ int main(int argc, char* argv[])
 	}
 
 	if (sb_dat) {
-		if (!dfu_upgrade(zf_sb_dat, zs_sb_dat, zf_sb_bin, zs_sb_bin)) {
+		r = dfu_upgrade(zf_sb_dat, zs_sb_dat, zf_sb_bin, zs_sb_bin);
+		if (r == DFU_RET_ERROR) {
 			goto exit;
+		} else if (r == DFU_RET_FW_VERSION) {
+			/* Bootloader update may fail because it already has the same
+			 * version. In this case try updating the Application */
+			LOG_NOTI("SoftDevice/Bootloader not updated!");
+			if (ap_dat) {
+				LOG_NOTI("Updating Application (%zd bytes):", zs_ap_bin);
+				goto update_app;
+			}
 		}
 	}
 
@@ -383,8 +393,10 @@ int main(int argc, char* argv[])
 		}
 	}
 
+update_app:
 	if (ap_dat) {
-		if (!dfu_upgrade(zf_ap_dat, zs_ap_dat, zf_ap_bin, zs_ap_bin)) {
+		r = dfu_upgrade(zf_ap_dat, zs_ap_dat, zf_ap_bin, zs_ap_bin);
+		if (r != DFU_RET_SUCCESS) {
 			goto exit;
 		}
 	}
