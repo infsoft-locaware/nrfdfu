@@ -194,15 +194,6 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 
 	nrf_dfu_response_t* resp = (nrf_dfu_response_t*)(buf + 1);
 
-	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
-		if (resp->result == NRF_DFU_RES_CODE_EXT_ERROR) {
-			LOG_ERR("\nERROR: %s", dfu_ext_err_str(resp->ext_err));
-		} else {
-			LOG_ERR("\nERROR: %s", dfu_err_str(resp->result));
-		}
-		return NULL;
-	}
-
 	if (resp->request != request) {
 		LOG_ERR("Response does not match request (0x%x vs 0x%x)", resp->request,
 				request);
@@ -210,6 +201,24 @@ static nrf_dfu_response_t* get_response(nrf_dfu_op_t request)
 	}
 
 	return resp;
+}
+
+static bool response_is_error(nrf_dfu_response_t* resp)
+{
+	if (resp == NULL) {
+		return true;
+	}
+
+	if (resp->result != NRF_DFU_RES_CODE_SUCCESS) {
+		if (resp->result == NRF_DFU_RES_CODE_EXT_ERROR) {
+			LOG_ERR("\nERROR: %s", dfu_ext_err_str(resp->ext_err));
+		} else {
+			LOG_ERR("\nERROR: %s", dfu_err_str(resp->result));
+		}
+		return true;
+	}
+
+	return false;
 }
 
 /* serial only */
@@ -227,8 +236,7 @@ bool dfu_ping(void)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
-		LOG_INF("Failed to read response");
+	if (response_is_error(resp)) {
 		return false;
 	}
 
@@ -253,7 +261,7 @@ static bool dfu_set_packet_receive_notification(uint16_t prn)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
+	if (response_is_error(resp)) {
 		return false;
 	}
 
@@ -274,7 +282,7 @@ static bool dfu_get_serial_mtu(void)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
+	if (response_is_error(resp)) {
 		return false;
 	}
 
@@ -306,7 +314,7 @@ static uint32_t dfu_get_crc(void)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
+	if (response_is_error(resp)) {
 		return 0;
 	}
 
@@ -328,7 +336,7 @@ static bool dfu_object_select(uint8_t type, uint32_t* offset, uint32_t* crc)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
+	if (response_is_error(resp)) {
 		return false;
 	}
 
@@ -353,7 +361,7 @@ static bool dfu_object_create(uint8_t type, uint32_t size)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
+	if (response_is_error(resp)) {
 		return false;
 	}
 
@@ -427,7 +435,7 @@ static bool dfu_object_execute(void)
 	}
 
 	nrf_dfu_response_t* resp = get_response(req.request);
-	if (!resp) {
+	if (response_is_error(resp)) {
 		return false;
 	}
 
