@@ -28,10 +28,15 @@
 
 #ifndef BLE_SUPPORT
 
-bool ble_enter_dfu(const char* interface, const char* address,
+int ble_enter_dfu(const char* interface, const char* address,
 				   enum BLE_ATYPE atype)
 {
 	return false;
+}
+bool ble_connect_dfu_targ(const char* interface, const char* address,
+                                                  enum BLE_ATYPE atype)
+{
+        return false;
 }
 bool ble_write_ctrl(uint8_t* req, size_t len)
 {
@@ -44,6 +49,9 @@ bool ble_write_data(uint8_t* req, size_t len)
 const uint8_t* ble_read(void)
 {
 	return NULL;
+}
+void ble_disconnect(void)
+{
 }
 void ble_fini(void)
 {
