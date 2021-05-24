@@ -8,7 +8,7 @@
             "name": "default",
             "defines": [ "BLE_SUPPORT"],
             "compilerPath": "/usr/bin/gcc",
-            "cStandard": "c11",
+            "cStandard": "gnu11",
             "cppStandard": "c++17",
             "intelliSenseMode": "gcc-x64"
         }
