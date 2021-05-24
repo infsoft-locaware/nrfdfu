@@ -34,6 +34,7 @@ bool ble_write_ctrl(uint8_t* req, size_t len);
 bool ble_write_data(uint8_t* req, size_t len);
 const uint8_t* ble_read(void);
 void ble_disconnect(void);
+void ble_wait_disconnect(int ms);
 void ble_fini(void);
 
 #endif

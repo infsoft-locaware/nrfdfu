@@ -369,10 +369,14 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	/* both updates BL+SD and APP are present, special handling of reconnection
+	 * to BL after update */
 	if (sb_dat && ap_dat) {
 		LOG_NOTI("Updating Application (%zd bytes):", zs_ap_bin);
 		if (conf.dfu_type == DFU_BLE) {
-			ble_disconnect();
+			/* wait until bootloader disconnect while updating BL+SD */
+			ble_wait_disconnect(10000);
+			/* connect to BL again */
 			if (!ble_connect_dfu_targ(conf.interface, conf.ble_addr,
 									  conf.ble_atype)) {
 				/* if that fails, it may be that the APP is already running,

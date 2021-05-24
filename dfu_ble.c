@@ -105,6 +105,7 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
 
 static void disconnect_handler(void* user)
 {
+	// LOG_NOTI("*disconnected*");
 	disconnect_noti = true;
 }
 
@@ -235,6 +236,8 @@ bool ble_connect_dfu_targ(const char* interface, const char* address,
 		return false;
 	}
 
+	blz_set_disconnect_handler(dev, disconnect_handler, NULL);
+
 	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
 		LOG_ERR("DFU Service not found");
@@ -284,8 +287,6 @@ const uint8_t* ble_read(void)
 
 void ble_disconnect(void)
 {
-	LOG_NOTI("Disconnecting");
-
 	if (cp) {
 		blz_char_notify_stop(cp);
 	}
@@ -310,6 +311,18 @@ void ble_fini(void)
 	disconnect_noti = true;
 	control_noti = true;
 	terminate = true;
+}
+
+void ble_wait_disconnect(int ms)
+{
+	LOG_NOTI("Waiting for Bootloader to disconnect...");
+	disconnect_noti = false;
+	blz_loop_wait(ctx, &disconnect_noti, ms);
+	if (!disconnect_noti) {
+		LOG_ERR("Timed out waiting for disconnection");
+	}
+	/* necessary for blzlib (Bluez) */
+	ble_disconnect();
 }
 
 #endif
