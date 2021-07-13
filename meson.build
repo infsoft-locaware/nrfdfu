@@ -14,6 +14,6 @@ endif
 
 executable('nrfdfu',
 	'main.c', 'log.c', 'util.c', 'serialtty.c',
-    'dfu.c', 'dfu_serial.c', 'slip.c', 'dfu_ble.c',
+    'dfu.c', 'dfu_serial.c', 'slip.c', 'dfu_ble.c', 'dfu_legacy.c',
 	dependencies : [ libsystemd, blzlib, libzip, jsonc, zlib ],
 	install: true, install_dir : 'sbin')

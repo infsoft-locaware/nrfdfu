@@ -29,6 +29,7 @@
 #include "conf.h"
 #include "dfu.h"
 #include "dfu_ble.h"
+#include "dfu_legacy.h"
 #include "dfu_serial.h"
 #include "log.h"
 #include "serialtty.h"
@@ -50,6 +51,7 @@ static struct option ble_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"addr", required_argument, NULL, 'a'},
 									  {"atype", optional_argument, NULL, 't'},
 									  {"intf", optional_argument, NULL, 'i'},
+									  {"legacy", no_argument, NULL, 'l'},
 									  {NULL, 0, NULL, 0}};
 
 static void usage(void)
@@ -77,6 +79,7 @@ static void usage(void)
 			"  -a, --addr <mac>\tBLE MAC address to connect to\n"
 			"  -t, --atype public|random\tBLE MAC address type (optional)\n"
 			"  -i, --intf <name>\tBT interface name (hci0)\n"
+			"  -l, --legacy\t\tLegacy DFU (SDK versions <= 11)\n"
 #endif
 	);
 }
@@ -117,7 +120,7 @@ static void main_options(int argc, char* argv[])
 		if (conf.dfu_type == DFU_SERIAL) {
 			n = getopt_long(argc, argv, "hv::p:b:c:C:t:", ser_options, NULL);
 		} else {
-			n = getopt_long(argc, argv, "hv::a:t:i:", ble_options, NULL);
+			n = getopt_long(argc, argv, "hv::a:t:i:l", ble_options, NULL);
 		}
 
 		if (n < 0)
@@ -163,6 +166,9 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'i':
 			conf.interface = optarg;
+			break;
+		case 'l':
+			conf.dfu_type = DFU_BLE_LEGACY;
 			break;
 		}
 	}
@@ -342,6 +348,12 @@ int main(int argc, char* argv[])
 			goto exit;
 		}
 		LOG_INF("Update contains Application");
+	}
+
+	/* handle legacy DFU separately */
+	if (conf.dfu_type == DFU_BLE_LEGACY) {
+		ldfu_start(zf_sb_bin, zs_sb_bin, zf_ap_bin, zs_ap_bin);
+		goto exit;
 	}
 
 	if (sb_dat) {

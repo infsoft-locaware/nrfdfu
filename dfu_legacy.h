@@ -1,7 +1,7 @@
 /*
  * nrfdfu - Nordic DFU Upgrade Utility
  *
- * Copyright (C) 2019 Bruno Randolf (br1@einfach.org)
+ * Copyright (C) 2021 Bruno Randolf (br1@einfach.org)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,33 +17,16 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-#ifndef CONF_H_
-#define CONF_H_
+#ifndef LEGACY_DFU_H
+#define LEGACY_DFU_H
 
 #include <stdbool.h>
-#include <stdint.h>
+#include <stddef.h>
+#include <zip.h>
 
-#define CONF_MAX_LEN 200
+#include "dfu.h"
 
-enum DFU_TYPE { DFU_SERIAL, DFU_BLE, DFU_BLE_LEGACY };
-
-/* same as enum blz_addr_type */
-enum BLE_ATYPE { BAT_UNKNOWN, BAT_PUBLIC, BAT_RANDOM };
-
-struct config {
-	int loglevel;
-	char* serport;
-	int serspeed;
-	char* zipfile;
-	char* dfucmd;
-	bool dfucmd_hex;
-	int timeout;
-	enum DFU_TYPE dfu_type;
-	char* interface;
-	char* ble_addr;
-	enum BLE_ATYPE ble_atype;
-};
-
-extern struct config conf;
+enum dfu_ret ldfu_start(zip_file_t* sd_zip, size_t sd_size, zip_file_t* app_zip,
+						size_t app_size);
 
 #endif

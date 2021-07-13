@@ -29,14 +29,14 @@
 #ifndef BLE_SUPPORT
 
 int ble_enter_dfu(const char* interface, const char* address,
-				   enum BLE_ATYPE atype)
+				  enum BLE_ATYPE atype)
 {
 	return false;
 }
 bool ble_connect_dfu_targ(const char* interface, const char* address,
-                                                  enum BLE_ATYPE atype)
+						  enum BLE_ATYPE atype)
 {
-        return false;
+	return false;
 }
 bool ble_write_ctrl(uint8_t* req, size_t len)
 {
