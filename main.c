@@ -86,6 +86,7 @@ static void main_options(int argc, char* argv[])
 	/* defaults */
 	conf.serport = "/dev/ttyUSB0";
 	conf.serspeed = 115200;
+	conf.ser_acm = false;
 	conf.loglevel = LL_NOTICE;
 	conf.timeout = 10;
 	conf.ble_atype = BAT_UNKNOWN;
@@ -136,6 +137,9 @@ static void main_options(int argc, char* argv[])
 			break;
 		case 'p':
 			conf.serport = optarg;
+			if (strstr(conf.serport, "ACM") != NULL) {
+				conf.ser_acm = true;
+			}
 			break;
 		case 'b':
 			conf.serspeed = atoi(optarg);

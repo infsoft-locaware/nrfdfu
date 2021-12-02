@@ -34,6 +34,7 @@ struct config {
 	int loglevel;
 	char* serport;
 	int serspeed;
+	bool ser_acm;
 	char* zipfile;
 	char* dfucmd;
 	bool dfucmd_hex;

@@ -109,6 +109,18 @@ static bool serial_enter_dfu_cmd(void)
 		serial_write(ser_fd, conf.dfucmd, strlen(conf.dfucmd), 1);
 		serial_write(ser_fd, "\r", 1, 1);
 	}
+
+	if (conf.ser_acm) {
+		/* device sends reply but it's easy to miss, since the serial port
+		 * disappears inmediately afterwards, so we ignore it and just reopen
+		 * the port */
+		LOG_INF("Reopen %s", conf.serport);
+		serial_fini(ser_fd);
+		sleep(1);
+		ser_fd = serial_init(conf.serport, DFU_SERIAL_BAUDRATE);
+		return true;
+	}
+
 	sleep(1);
 
 	int ret = read(ser_fd, b, 200);
