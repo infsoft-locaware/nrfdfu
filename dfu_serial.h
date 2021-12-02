@@ -25,7 +25,7 @@
 #include <stdint.h>
 
 /* SLIP buffer size should be bigger than MTU */
-#define BUF_SIZE	  100
+#define BUF_SIZE	  1050
 #define SLIP_BUF_SIZE (BUF_SIZE * 2 + 1)
 
 bool ser_enter_dfu(void);
