@@ -23,12 +23,14 @@
 
 #include "util.h"
 
-/* dump data in same format as nrfutil (integer) */
+#define DUMP_FMT "%x "
+//#define DUMP_FMT "%d " /* dump data in same format as nrfutil (integer) */
+
 void dump_data(const char* txt, const uint8_t* data, size_t len)
 {
 	printf("[ %s", txt);
 	for (int i = 0; i < len; i++) {
-		printf("%d ", *(data + i));
+		printf(DUMP_FMT, *(data + i));
 	}
 	printf("]\n");
 }

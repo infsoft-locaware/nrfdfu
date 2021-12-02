@@ -188,9 +188,9 @@ bool serial_set_baudrate(int fd, int baud)
 	tty.c_cflag = CLOCAL | CREAD | CS8;
 	serial_set_tty_speed(baud);
 
-	if (tcsetattr(fd, TCSAFLUSH, &tty) != 0) {
-		LOG_ERR("Couldn't set termio attrs baudrate");
-		return false;
-	}
+	//if (tcsetattr(fd, TCSAFLUSH, &tty) != 0) {
+	//	LOG_ERR("Couldn't set termio attrs baudrate");
+//		return false;
+//	}
 	return true;
 }
