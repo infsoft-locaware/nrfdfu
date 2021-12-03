@@ -209,7 +209,7 @@ void ser_fini(void)
 
 void ser_reopen(int sleep_time)
 {
-	LOG_INF("Reopen %s", conf.serport);
+	LOG_NOTI("Reopen %s in %d seconds...", conf.serport, sleep_time);
 	serial_fini(ser_fd);
 	sleep(sleep_time);
 	ser_fd = serial_init(conf.serport, DFU_SERIAL_BAUDRATE);
