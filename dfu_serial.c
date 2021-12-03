@@ -114,7 +114,7 @@ static bool ser_enter_dfu_cmd(void)
 		/* device sends reply but it's easy to miss, since the serial port
 		 * disappears inmediately afterwards, so we ignore it and just reopen
 		 * the port */
-		ser_reopen(1);
+		ser_reopen(2);
 		return true;
 	}
 
