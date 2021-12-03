@@ -114,10 +114,7 @@ static bool serial_enter_dfu_cmd(void)
 		/* device sends reply but it's easy to miss, since the serial port
 		 * disappears inmediately afterwards, so we ignore it and just reopen
 		 * the port */
-		LOG_INF("Reopen %s", conf.serport);
-		serial_fini(ser_fd);
-		sleep(1);
-		ser_fd = serial_init(conf.serport, DFU_SERIAL_BAUDRATE);
+		ser_reopen(1);
 		return true;
 	}
 
@@ -208,4 +205,12 @@ void ser_fini(void)
 		serial_fini(ser_fd);
 		ser_fd = -1;
 	}
+}
+
+void ser_reopen(int sleep_time)
+{
+	LOG_INF("Reopen %s", conf.serport);
+	serial_fini(ser_fd);
+	sleep(sleep_time);
+	ser_fd = serial_init(conf.serport, DFU_SERIAL_BAUDRATE);
 }

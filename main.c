@@ -390,8 +390,12 @@ int main(int argc, char* argv[])
 				}
 			}
 		} else {
-			/* Serial: Sleep a bit and then try to ping */
-			sleep(5);
+			/* Serial: Reopen ACM device and sleep a bit and then try to ping */
+			if (conf.ser_acm) {
+				ser_reopen(10);
+			} else {
+				sleep(5);
+			}
 			bool p = false;
 			int cnt = 0;
 			while (!p && cnt < 3) {
