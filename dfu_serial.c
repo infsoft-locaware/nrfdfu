@@ -88,7 +88,7 @@ const uint8_t* ser_read_decode(int timeout_sec)
 	return (end == 1 ? buf : NULL);
 }
 
-static bool serial_enter_dfu_cmd(void)
+static bool ser_enter_dfu_cmd(void)
 {
 	char b[200];
 
@@ -162,7 +162,7 @@ bool ser_enter_dfu(void)
 	bool ret = false;
 	do {
 		if (conf.dfucmd) {
-			ret = serial_enter_dfu_cmd();
+			ret = ser_enter_dfu_cmd();
 			if (terminate) {
 				ret = false;
 				break;
