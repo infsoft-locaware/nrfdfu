@@ -29,14 +29,14 @@
 #ifndef BLE_SUPPORT
 
 int ble_enter_dfu(const char* interface, const char* address,
-				   enum BLE_ATYPE atype)
+				  enum BLE_ATYPE atype)
 {
 	return false;
 }
 bool ble_connect_dfu_targ(const char* interface, const char* address,
-                                                  enum BLE_ATYPE atype)
+						  enum BLE_ATYPE atype)
 {
-        return false;
+	return false;
 }
 bool ble_write_ctrl(uint8_t* req, size_t len)
 {
@@ -103,10 +103,12 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
 	}
 }
 
-static void disconnect_handler(void* user)
+static void connect_handler(bool conn, void* user)
 {
-	// LOG_NOTI("*disconnected*");
-	disconnect_noti = true;
+	if (!conn) {
+		// LOG_NOTI("*disconnected*");
+		disconnect_noti = true;
+	}
 }
 
 static blz_dev* retry_connect(const char* address, enum BLE_ATYPE atype,
@@ -156,7 +158,7 @@ int ble_enter_dfu(const char* interface, const char* address,
 		return false;
 	}
 
-	blz_set_disconnect_handler(dev, disconnect_handler, NULL);
+	blz_set_connect_handler(dev, connect_handler, NULL);
 
 	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
@@ -236,7 +238,7 @@ bool ble_connect_dfu_targ(const char* interface, const char* address,
 		return false;
 	}
 
-	blz_set_disconnect_handler(dev, disconnect_handler, NULL);
+	blz_set_connect_handler(dev, connect_handler, NULL);
 
 	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
