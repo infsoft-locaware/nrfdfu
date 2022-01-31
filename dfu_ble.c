@@ -152,13 +152,13 @@ int ble_enter_dfu(const char* interface, const char* address,
 		return false;
 	}
 
+	blz_set_connect_handler(ctx, connect_handler, NULL);
+
 	LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
 	dev = retry_connect(address, atype, CONNECT_NORMAL_TRY);
 	if (dev == NULL) {
 		return false;
 	}
-
-	blz_set_connect_handler(dev, connect_handler, NULL);
 
 	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
@@ -237,8 +237,6 @@ bool ble_connect_dfu_targ(const char* interface, const char* address,
 	if (dev == NULL) {
 		return false;
 	}
-
-	blz_set_connect_handler(dev, connect_handler, NULL);
 
 	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {
