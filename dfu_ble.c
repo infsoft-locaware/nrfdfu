@@ -134,9 +134,9 @@ static blz_dev* retry_connect(const char* address, enum BLE_ATYPE atype,
 
 static bool start_cp_notify()
 {
-	bool b = blz_char_notify_start(cp, control_notify_handler, NULL);
-	if (!b) {
-		LOG_ERR("Could not start CP notification");
+	blz_ret r = blz_char_notify_start(cp, control_notify_handler, NULL);
+	if (r != BLZ_OK) {
+		LOG_ERR("Could not start CP notification %s", blz_errstr(r));
 		return false;
 	}
 	return true;
@@ -184,18 +184,18 @@ int ble_enter_dfu(const char* interface, const char* address,
 		}
 	}
 
-	bool b = blz_char_indicate_start(bch, buttonless_notify_handler, NULL);
-	if (!b) {
-		LOG_ERR("Could not start buttonless notification");
+	blz_ret r = blz_char_indicate_start(bch, buttonless_notify_handler, NULL);
+	if (r != BLZ_OK) {
+		LOG_ERR("Could not start buttonless notification %s", blz_errstr(r));
 		return false;
 	}
 
 	LOG_NOTI("Enter DFU Bootloader");
 
 	uint8_t buf = 0x01;
-	b = blz_char_write(bch, &buf, 1);
-	if (!b) {
-		LOG_ERR("Could not write buttonless");
+	r = blz_char_write(bch, &buf, 1);
+	if (r != BLZ_OK) {
+		LOG_ERR("Could not write buttonless %s", blz_errstr(r));
 		return false;
 	}
 
@@ -261,7 +261,12 @@ bool ble_write_ctrl(uint8_t* req, size_t len)
 	if (conf.loglevel >= LL_DEBUG) {
 		dump_data("CP: ", req, len);
 	}
-	return blz_char_write(cp, req, len);
+	blz_ret r = blz_char_write(cp, req, len);
+	if (r != BLZ_OK) {
+		LOG_ERR("Failed to write CP: %s", blz_errstr(r));
+		return false;
+	}
+	return true;
 }
 
 bool ble_write_data(uint8_t* req, size_t len)
@@ -269,7 +274,12 @@ bool ble_write_data(uint8_t* req, size_t len)
 	if (conf.loglevel >= LL_DEBUG) {
 		dump_data("TX: ", req, len);
 	}
-	return blz_char_write_cmd(dp, req, len);
+	blz_ret r = blz_char_write_cmd(dp, req, len);
+	if (r != BLZ_OK) {
+		LOG_ERR("Failed to write data: %s", blz_errstr(r));
+		return false;
+	}
+	return true;
 }
 
 const uint8_t* ble_read(void)
