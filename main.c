@@ -50,6 +50,7 @@ static struct option ble_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"addr", required_argument, NULL, 'a'},
 									  {"atype", optional_argument, NULL, 't'},
 									  {"intf", optional_argument, NULL, 'i'},
+									  {"passkey", required_argument, NULL, 'p'},
 									  {NULL, 0, NULL, 0}};
 
 static void usage(void)
@@ -77,6 +78,7 @@ static void usage(void)
 			"  -a, --addr <mac>\tBLE MAC address to connect to\n"
 			"  -t, --atype public|random\tBLE MAC address type (optional)\n"
 			"  -i, --intf <name>\tBT interface name (hci0)\n"
+			"  -p, --passkey <6digits>\tUse BLE security with passkey\n"
 #endif
 	);
 }
@@ -92,6 +94,7 @@ static void main_options(int argc, char* argv[])
 	conf.ble_atype = BAT_UNKNOWN;
 	conf.interface = "hci0";
 	conf.dfucmd_hex = false;
+	conf.ble_passkey = NULL;
 
 	if (argc <= 1) {
 		usage();
@@ -118,7 +121,7 @@ static void main_options(int argc, char* argv[])
 		if (conf.dfu_type == DFU_SERIAL) {
 			n = getopt_long(argc, argv, "hv::p:b:c:C:t:", ser_options, NULL);
 		} else {
-			n = getopt_long(argc, argv, "hv::a:t:i:", ble_options, NULL);
+			n = getopt_long(argc, argv, "hv::a:t:i:p:", ble_options, NULL);
 		}
 
 		if (n < 0)
@@ -136,9 +139,13 @@ static void main_options(int argc, char* argv[])
 				conf.loglevel = LL_DEBUG;
 			break;
 		case 'p':
-			conf.serport = optarg;
-			if (strstr(conf.serport, "ACM") != NULL) {
-				conf.ser_acm = true;
+			if (conf.dfu_type == DFU_SERIAL) {
+				conf.serport = optarg;
+				if (strstr(conf.serport, "ACM") != NULL) {
+					conf.ser_acm = true;
+				}
+			} else {
+				conf.ble_passkey = optarg;
 			}
 			break;
 		case 'b':

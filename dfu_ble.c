@@ -154,11 +154,36 @@ int ble_enter_dfu(const char* interface, const char* address,
 
 	blz_set_connect_handler(ctx, connect_handler, NULL);
 
+#ifdef BLSLIB_EXTRAS
+	if (conf.ble_passkey != NULL) {
+		LOG_INF("SER param");
+		bls_set_security_parameters(
+			ctx, BLSLIB_SEC_FLAG_ALL | BLSLIB_SEC_FLAG_REPA, conf.ble_passkey);
+	}
+#endif
+
 	LOG_NOTI("Connecting to %s (%s)...", address, blz_addr_type_str(atype));
 	dev = retry_connect(address, atype, CONNECT_NORMAL_TRY);
 	if (dev == NULL) {
 		return false;
 	}
+
+#ifdef BLSLIB_EXTRAS
+	if (conf.ble_passkey != NULL) {
+		uint8_t flags = bls_start_get_security_status(dev);
+		LOG_ERR(
+			"Connection %s secure (encrypted: %d bond: %d mitm: %d lesc: %d "
+			"repair: %d)",
+			(flags & BLSLIB_SEC_FLAG_MITM) == BLSLIB_SEC_FLAG_MITM ? "is"
+																   : "is not",
+			!!(flags & BLSLIB_SEC_FLAG_ENCR), !!(flags & BLSLIB_SEC_FLAG_BOND),
+			!!(flags & BLSLIB_SEC_FLAG_MITM), !!(flags & BLSLIB_SEC_FLAG_LESC),
+			!!(flags & BLSLIB_SEC_FLAG_REPA));
+		if ((flags & BLSLIB_SEC_FLAG_MITM) != BLSLIB_SEC_FLAG_MITM) {
+			return false;
+		}
+	}
+#endif
 
 	srv = blz_get_serv_from_uuid(dev, DFU_SERVICE_UUID);
 	if (srv == NULL) {

@@ -43,6 +43,7 @@ struct config {
 	char* interface;
 	char* ble_addr;
 	enum BLE_ATYPE ble_atype;
+	char* ble_passkey;
 };
 
 extern struct config conf;
