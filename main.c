@@ -100,7 +100,7 @@ static void main_options(int argc, char* argv[])
 	conf.interface = "hci0";
 	conf.ble_passkey = NULL;
 #endif
-conf.dfucmd_hex = false;
+	conf.dfucmd_hex = false;
 
 	if (argc <= 1) {
 		usage();
@@ -188,8 +188,8 @@ conf.dfucmd_hex = false;
 		case 'i':
 			conf.interface = optarg;
 			break;
-		}
 #endif
+		}
 	}
 
 	/* last non-option argument is ZIP file.
