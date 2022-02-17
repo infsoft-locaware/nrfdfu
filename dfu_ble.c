@@ -56,7 +56,9 @@ void ble_disconnect(void)
 void ble_fini(void)
 {
 }
-
+void ble_wait_disconnect(int ms)
+{
+}
 #else
 
 #include <blzlib.h>

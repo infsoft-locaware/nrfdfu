@@ -52,6 +52,10 @@ library dependencies:
 
     cmake -S . -B build2 -DBLE_SUPPORT=OFF
 
+Or for Meson:
+
+	meson -Dble_support=disabled build
+
 
 ## Usage ##
 ```
