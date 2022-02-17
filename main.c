@@ -28,7 +28,9 @@
 
 #include "conf.h"
 #include "dfu.h"
+#ifdef BLE_SUPPORT
 #include "dfu_ble.h"
+#endif
 #include "dfu_serial.h"
 #include "log.h"
 #include "serialtty.h"
@@ -45,6 +47,7 @@ static struct option ser_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"timeout", required_argument, NULL, 't'},
 									  {NULL, 0, NULL, 0}};
 
+#ifdef BLE_SUPPORT
 static struct option ble_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"verbose", optional_argument, NULL, 'v'},
 									  {"addr", required_argument, NULL, 'a'},
@@ -52,6 +55,7 @@ static struct option ble_options[] = {{"help", no_argument, NULL, 'h'},
 									  {"intf", optional_argument, NULL, 'i'},
 									  {"passkey", required_argument, NULL, 'p'},
 									  {NULL, 0, NULL, 0}};
+#endif
 
 static void usage(void)
 {
@@ -91,10 +95,12 @@ static void main_options(int argc, char* argv[])
 	conf.ser_acm = false;
 	conf.loglevel = LL_NOTICE;
 	conf.timeout = 10;
+#ifdef BLE_SUPPORT
 	conf.ble_atype = BAT_UNKNOWN;
 	conf.interface = "hci0";
-	conf.dfucmd_hex = false;
 	conf.ble_passkey = NULL;
+#endif
+conf.dfucmd_hex = false;
 
 	if (argc <= 1) {
 		usage();
@@ -104,9 +110,9 @@ static void main_options(int argc, char* argv[])
 	const char* type = argv[1];
 	if (strncasecmp(argv[1], "ser", 3) == 0) {
 		conf.dfu_type = DFU_SERIAL;
+#ifdef BLE_SUPPORT
 	} else if (strncasecmp(argv[1], "ble", 3) == 0) {
 		conf.dfu_type = DFU_BLE;
-#ifndef BLE_SUPPORT
 		LOG_ERR("BLE Support is not compiled in");
 		exit(EXIT_FAILURE);
 #endif
@@ -120,8 +126,10 @@ static void main_options(int argc, char* argv[])
 	while (n >= 0) {
 		if (conf.dfu_type == DFU_SERIAL) {
 			n = getopt_long(argc, argv, "hv::p:b:c:C:t:", ser_options, NULL);
+#ifdef BLE_SUPPORT
 		} else {
 			n = getopt_long(argc, argv, "hv::a:t:i:p:", ble_options, NULL);
+#endif
 		}
 
 		if (n < 0)
@@ -144,8 +152,10 @@ static void main_options(int argc, char* argv[])
 				if (strstr(conf.serport, "ACM") != NULL) {
 					conf.ser_acm = true;
 				}
+#ifdef BLE_SUPPORT
 			} else {
 				conf.ble_passkey = optarg;
+#endif
 			}
 			break;
 		case 'b':
@@ -161,14 +171,17 @@ static void main_options(int argc, char* argv[])
 		case 't':
 			if (conf.dfu_type == DFU_SERIAL) {
 				conf.timeout = atoi(optarg);
+#ifdef BLE_SUPPORT
 			} else {
 				if (strncasecmp(optarg, "pub", 3) == 0) {
 					conf.ble_atype = BAT_PUBLIC;
 				} else if (strncasecmp(optarg, "rand", 4) == 0) {
 					conf.ble_atype = BAT_RANDOM;
 				}
+#endif
 			}
 			break;
+#ifdef BLE_SUPPORT
 		case 'a':
 			conf.ble_addr = optarg;
 			break;
@@ -176,6 +189,7 @@ static void main_options(int argc, char* argv[])
 			conf.interface = optarg;
 			break;
 		}
+#endif
 	}
 
 	/* last non-option argument is ZIP file.
@@ -286,8 +300,10 @@ static void signal_handler(__attribute__((unused)) int signo)
 {
 	if (conf.dfu_type == DFU_SERIAL) {
 		ser_fini();
+#ifdef BLE_SUPPORT
 	} else {
 		ble_fini();
+#endif
 	}
 }
 
@@ -316,12 +332,14 @@ int main(int argc, char* argv[])
 
 	if (conf.dfu_type == DFU_SERIAL) {
 		LOG_INF("Serial Port: %s (%d baud)", conf.serport, conf.serspeed);
+#ifdef BLE_SUPPORT
 	} else {
 		if (conf.ble_addr == NULL) {
 			LOG_ERR("Need BLE Target addr -a");
 			exit(EXIT_FAILURE);
 		}
 		LOG_INF("BLE Target: %s", conf.ble_addr);
+#endif
 	}
 	LOG_INF("DFU Package: %s", conf.zipfile);
 
@@ -384,6 +402,7 @@ int main(int argc, char* argv[])
 	 * to BL after update */
 	if (sb_dat && ap_dat) {
 		LOG_NOTI("Updating Application (%zd bytes):", zs_ap_bin);
+#ifdef BLE_SUPPORT
 		if (conf.dfu_type == DFU_BLE) {
 			/* wait until bootloader disconnect while updating BL+SD */
 			ble_wait_disconnect(10000);
@@ -397,6 +416,7 @@ int main(int argc, char* argv[])
 				}
 			}
 		} else {
+#endif
 			/* Serial: Reopen ACM device and sleep a bit and then try to ping */
 			if (conf.ser_acm) {
 				ser_reopen(10);
@@ -409,7 +429,9 @@ int main(int argc, char* argv[])
 				p = dfu_ping();
 				cnt++;
 			}
+#ifdef BLE_SUPPORT
 		}
+#endif
 	}
 
 update_app:
@@ -444,8 +466,10 @@ exit:
 	}
 	if (conf.dfu_type == DFU_SERIAL) {
 		ser_fini();
+#ifdef BLE_SUPPORT
 	} else {
 		ble_fini();
+#endif
 	}
 	return ret;
 }
