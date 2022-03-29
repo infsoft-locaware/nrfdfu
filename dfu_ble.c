@@ -105,7 +105,8 @@ void control_notify_handler(const uint8_t* data, size_t len, blz_char* ch,
 	}
 }
 
-static void connect_handler(bool conn, void* user)
+static void connect_handler(bool conn, uint16_t conn_hdl, bool periph,
+							void* user)
 {
 	if (!conn) {
 		// LOG_NOTI("*disconnected*");
