@@ -182,9 +182,6 @@ int ble_enter_dfu(const char* interface, const char* address,
 			!!(flags & BLSLIB_SEC_FLAG_ENCR), !!(flags & BLSLIB_SEC_FLAG_BOND),
 			!!(flags & BLSLIB_SEC_FLAG_MITM), !!(flags & BLSLIB_SEC_FLAG_LESC),
 			!!(flags & BLSLIB_SEC_FLAG_REPA));
-		if ((flags & BLSLIB_SEC_FLAG_MITM) != BLSLIB_SEC_FLAG_MITM) {
-			return false;
-		}
 	}
 #endif
 
