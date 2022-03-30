@@ -159,7 +159,6 @@ int ble_enter_dfu(const char* interface, const char* address,
 
 #ifdef BLSLIB_EXTRAS
 	if (conf.ble_passkey != NULL) {
-		LOG_INF("SER param");
 		bls_set_security_parameters(
 			ctx, BLSLIB_SEC_FLAG_ALL | BLSLIB_SEC_FLAG_REPA, conf.ble_passkey);
 	}
