@@ -17,7 +17,8 @@ endif (BLE_SUPPORT)
 add_executable(nrfdfu main.c log.c util.c serialtty.c
     dfu.c dfu_serial.c slip.c dfu_ble.c)
 
-target_include_directories(nrfdfu PRIVATE . ${BLZLIB_INCLUDE_DIRS})
+target_include_directories(nrfdfu PRIVATE . ${ZLIB_INCLUDE_DIRS}
+    ${LIBZIP_INCLUDE_DIRS} ${JSONC_INCLUDE_DIRS} ${BLZLIB_INCLUDE_DIRS})
 target_link_libraries(nrfdfu ${ZLIB_LIBRARIES} ${LIBZIP_LIBRARIES}
     ${JSONC_LIBRARIES} ${BLZ_LIBRARIES})
 

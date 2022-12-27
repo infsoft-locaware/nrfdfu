@@ -17,7 +17,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+#ifdef __APPLE__
+#include "mac_endian.h"
+#else
 #include <endian.h>
+#endif
 
 #include <zlib.h>
 
