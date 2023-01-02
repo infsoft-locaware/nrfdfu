@@ -46,11 +46,13 @@ static void serial_set_tty_speed(int baud)
 		case 57600:		tty.c_cflag |= B57600; break;
 		case 115200:	tty.c_cflag |= B115200; break;
 		case 230400:	tty.c_cflag |= B230400; break;
+#ifndef __APPLE__
 		case 460800:	tty.c_cflag |= B460800; break;
 		case 500000:	tty.c_cflag |= B500000; break;
 		case 576000:	tty.c_cflag |= B576000; break;
 		case 921600:	tty.c_cflag |= B921600; break;
 		case 1000000:	tty.c_cflag |= B1000000; break;
+#endif
 		default:		LOG_ERR("Unknown baudrate %d", baud);
 	}
 	// clang-format on
